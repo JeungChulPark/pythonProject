@@ -102,7 +102,7 @@ def TrainingTransferLearning(xn_train, yn_train):
     return model
 
 def lr_schedule(epoch):
-    lr = 1e-8
+    lr = 1e-3
     if epoch > 180:
         lr *= 0.5e-3
     elif epoch > 160:
@@ -606,8 +606,8 @@ def TrainingResNetTransferLearning(version=1, basemodel_name=''):
 # img_array_tl, img_array_tl_res = MNISTTransferLearning('mnist_model_modified_epoch100')
 # TrainingTransferLearning(img_array_tl, img_array_tl_res)
 
-# TrainingResNet(2)
-TrainingResNetTransferLearning(2, 'saved_models/mnist_ResNet29v2_model.093.h5')
+TrainingResNet(2)
+# TrainingResNetTransferLearning(2, 'saved_models/mnist_ResNet29v2_model.093.h5')
 
 # v = GetFilePath()
 # img_array = []
