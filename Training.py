@@ -18,6 +18,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.models import Model
+from model.ResNet import ResNet
 
 import math
 
@@ -606,8 +607,11 @@ def TrainingResNetTransferLearning(version=1, basemodel_name=''):
 # img_array_tl, img_array_tl_res = MNISTTransferLearning('mnist_model_modified_epoch100')
 # TrainingTransferLearning(img_array_tl, img_array_tl_res)
 
-TrainingResNet(2)
+# TrainingResNet(1)
 # TrainingResNetTransferLearning(2, 'saved_models/mnist_ResNet29v2_model.093.h5')
+
+# resnet = ResNet()
+# resnet.Train(1)
 
 # v = GetFilePath()
 # img_array = []

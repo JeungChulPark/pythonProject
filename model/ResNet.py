@@ -105,8 +105,6 @@ class ResNet(object):
         y = Flatten()(x)
         y = Dense(units=32, activation='relu')(y)
         y = Dropout(0.5)(y)
-        # y = Dense(units=64, activation='relu')(y)
-        # y = Dropout(0.5)(y)
         outputs = Dense(num_classes,
                         activation='softmax',
                         kernel_initializer='he_normal')(y)
@@ -170,10 +168,10 @@ class ResNet(object):
         x = Activation('relu')(x)
         x = AveragePooling2D(pool_size=4)(x)
         y = Flatten()(x)
-        y = Dense(units=32, activation='relu')(y)
+        y = Dense(units=128, activation='relu')(y)
         y = Dropout(0.5)(y)
-        # y = Dense(units=64, activation='relu')(y)
-        # y = Dropout(0.5)(y)
+        y = Dense(units=64, activation='relu')(y)
+        y = Dropout(0.5)(y)
         outputs = Dense(num_classes,
                         activation='softmax',
                         kernel_initializer='he_normal')(y)
