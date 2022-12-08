@@ -64,10 +64,10 @@ def Training():
     ])
     model.compile(loss='categorical_crossentropy', optimizer=tf.optimizers.Adam(lr=0.001), metrics=['accuracy'])
     model.summary()
-    model.fit(x_train, y_train, batch_size=100, epochs=100, validation_data=(x_test, y_test))
+    model.fit(x_train, y_train, batch_size=100, epochs=10, validation_data=(x_test, y_test))
     result = model.evaluate(x_test, y_test)
 
-    model.save('mnist_model_modified_epoch100')
+    model.save('mnist_model_modified_epoch10')
     # onnx_model = keras2onnx.convert_keras(model, name="mnist_keras_model", target_opset=9, channel_first_inputs=None)
     # onnx.save_model(onnx_model, "mnist_keras_model.onnx")
     # tf.saved_model.save(model, "mnist_tf_v1_model")
@@ -602,7 +602,7 @@ def TrainingResNetTransferLearning(version=1, basemodel_name=''):
     print('Test loss:', scores[0])
     print('Test accuracy:', scores[1])
 
-# Training()
+Training()
 
 # img_array_tl, img_array_tl_res = MNISTTransferLearning('mnist_model_modified_epoch100')
 # TrainingTransferLearning(img_array_tl, img_array_tl_res)
