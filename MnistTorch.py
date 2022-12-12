@@ -16,6 +16,7 @@ class CustomDataSet(Dataset):
         self.filepathes = self.GetFilePath(path)
         self.mnist_imgs = []
         for file in self.filepathes:
+            # print(file)
             mnist_img = self.ResizeImage(file)
             self.mnist_imgs.append(mnist_img)
         # self.transform_imgs = np.array(self.mnist_imgs)
@@ -25,8 +26,9 @@ class CustomDataSet(Dataset):
     def __len__(self):
         print("__len__")
         return len(self.filepathes)
+
     def __getitem__(self, idx):
-        print("get item : %d" % idx)
+        # print("get item : %d" % idx)
         # if self.transform is not None:
         # self.transform_imgs[idx] = self.transform_imgs[idx] / 255.0
         # self.transform_imgs[idx] = self.transform(self.transform_imgs[idx])
@@ -34,9 +36,11 @@ class CustomDataSet(Dataset):
         # return self.mnist_imgs[idx]
 
         img = np.array(self.mnist_imgs[idx])
-        img = img.reshape(1, 28, 28)
+        # img = img.reshape(1, 28, 28)
+        img = img / 255.0
         transform_img = self.transform(img)
         return transform_img
+        # return self.mnist_imgs[idx]
 
     def ResizeImage(self, filename):
         img = cv2.imread(filename)
@@ -45,6 +49,7 @@ class CustomDataSet(Dataset):
         ret, img_th = cv2.threshold(img_blur, 127, 255, cv2.THRESH_BINARY_INV)
         resized_img = cv2.resize(img_th, dsize=(28, 28), interpolation=cv2.INTER_AREA)
         return resized_img
+
     def GetFilePath(self, path):
         # path = "Image/Result"
         filelist = []
@@ -65,7 +70,7 @@ def GetFilePath():
         for file in files:
             filelist.append(os.path.join(root, file))
 
-    print("\n")
+    # print("\n")
     v = [x for x in filelist if x.endswith(".png")]
     return v
 
@@ -169,15 +174,17 @@ dataloader = DataLoader(dataset, batch_size=batch_size)
 print('dataloader : ')
 
 with torch.no_grad():
-    for data in enumerate(dataloader):
-        data = torch.from_numpy(data)
-        print(type(data))
-        # out = model(data)
-        # preds = torch.max(out.data, 1)[1]
-        # print(preds)
-        # cv2.imshow("img", data[0])
-        # cv2.waitKey(0)
-        break
+    for data in dataloader:
+        # print(type(data))
+        # print(data)
+        data = data.to(device, dtype=torch.float32)
+        out = model(data)
+        preds = torch.max(out.data, 1)[1]
+        print(preds)
+        # for img in data:
+        #     cv2.imshow("img", img)
+        #     cv2.waitKey(0)
+        #     break
 
 
 # test_loader = DataTestLoad()
