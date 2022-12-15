@@ -151,37 +151,38 @@ print(device + " is available")
 
 learning_rate = 0.001
 batch_size = 100
+epochs = 10
 num_classes = 10
-epochs = 100
+
 
 model = ConvNet().to(device)
 criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
-Train()
-torch.save(model.state_dict(), 'save/ConvNetModel100.pt')
+# Train()
+# torch.save(model.state_dict(), 'save/ConvNetModel10.pt')
 
-# model.load_state_dict(torch.load('save/model100.pt'))
-# model.eval()
-#
-# transform = transforms.Compose(
-#     [
-#         transforms.ToTensor()
-#     ]
-# )
-# dataset = CustomDataSet(path='Image/Result', transform=transform)
-# dataloader = DataLoader(dataset, batch_size=batch_size)
-# print('dataloader : ')
-#
-# f = open("Image/Result/answer_ConvNet_model100.txt", 'w')
-# with torch.no_grad():
-#     for data in dataloader:
-#         # print(type(data))
-#         # print(data)
-#         data = data.to(device, dtype=torch.float32)
-#         out = model(data)
-#         preds = torch.max(out.data, 1)[1]
-#         print(preds)
-#         for i in preds:
-#             f.write("%d\n" % i)
-# f.close()
+model.load_state_dict(torch.load('save/ConvNetModel10.pt'))
+model.eval()
+
+transform = transforms.Compose(
+    [
+        transforms.ToTensor()
+    ]
+)
+dataset = CustomDataSet(path='Image/Result', transform=transform)
+dataloader = DataLoader(dataset, batch_size=batch_size)
+print('dataloader : ')
+
+f = open("Image/Result/answer_ConvNet_model10.txt", 'w')
+with torch.no_grad():
+    for data in dataloader:
+        # print(type(data))
+        # print(data)
+        data = data.to(device, dtype=torch.float32)
+        out = model(data)
+        preds = torch.max(out.data, 1)[1]
+        print(preds)
+        for i in preds:
+            f.write("%d\n" % i)
+f.close()
