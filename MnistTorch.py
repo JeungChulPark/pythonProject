@@ -158,48 +158,30 @@ model = ConvNet().to(device)
 criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
-# Train()
-# torch.save(model.state_dict(), 'save/model100.pt')
+Train()
+torch.save(model.state_dict(), 'save/ConvNetModel100.pt')
 
-model.load_state_dict(torch.load('save/model100.pt'))
-model.eval()
-
-transform = transforms.Compose(
-    [
-        transforms.ToTensor()
-    ]
-)
-dataset = CustomDataSet(path='Image/Result', transform=transform)
-dataloader = DataLoader(dataset, batch_size=batch_size)
-print('dataloader : ')
-
-with torch.no_grad():
-    for data in dataloader:
-        # print(type(data))
-        # print(data)
-        data = data.to(device, dtype=torch.float32)
-        out = model(data)
-        preds = torch.max(out.data, 1)[1]
-        print(preds)
-        # for img in data:
-        #     cv2.imshow("img", img)
-        #     cv2.waitKey(0)
-        #     break
-
-
-# test_loader = DataTestLoad()
-# with torch.no_grad():
-#     correct = 0
-#     total = 0
+# model.load_state_dict(torch.load('save/model100.pt'))
+# model.eval()
 #
-#     for data, target in test_loader:
-#         print(type(data))
-#         data = data.to(device)
-#         target = target.to(device)
+# transform = transforms.Compose(
+#     [
+#         transforms.ToTensor()
+#     ]
+# )
+# dataset = CustomDataSet(path='Image/Result', transform=transform)
+# dataloader = DataLoader(dataset, batch_size=batch_size)
+# print('dataloader : ')
+#
+# f = open("Image/Result/answer_ConvNet_model100.txt", 'w')
+# with torch.no_grad():
+#     for data in dataloader:
+#         # print(type(data))
+#         # print(data)
+#         data = data.to(device, dtype=torch.float32)
 #         out = model(data)
 #         preds = torch.max(out.data, 1)[1]
 #         print(preds)
-#         total += len(target)
-#         correct += (preds == target).sum().item()
-#     print("Test Accuracy: ", 100.*correct/total, '%')
-
+#         for i in preds:
+#             f.write("%d\n" % i)
+# f.close()
