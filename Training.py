@@ -32,7 +32,7 @@ def Training():
     x_test = x_test.reshape(-1, 28, 28, 1)
     y_train = tf.keras.utils.to_categorical(y_train, 10)
     y_test = tf.keras.utils.to_categorical(y_test, 10)
-    version = 2
+    version = 3
     if version == 0:
         model = tf.keras.Sequential([
             tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=64, input_shape=(28,28,1), padding='same', activation='relu'),
@@ -82,10 +82,17 @@ def Training():
             tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
             tf.keras.layers.Conv2D(kernel_size=(5, 5), filters=20, padding='valid', activation='relu'),
             tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
-            tf.keras.layers.Dropout(0.25),
+            # tf.keras.layers.Dropout(0.25),
             tf.keras.layers.Flatten(),
             tf.keras.layers.Dense(units=100, activation='relu'),
             tf.keras.layers.Dense(units=10, activation='softmax')
+        ])
+
+    elif version == 3:
+        model = tf.keras.Sequential([
+            tf.keras.layers.Flatten(input_shape=(28, 28)),
+            tf.keras.layers.Dense(512, activation='relu'),
+            tf.keras.layers.Dense(10, activation='softmax')
         ])
 
     model.compile(loss='categorical_crossentropy', optimizer=tf.optimizers.Adam(lr=0.001), metrics=['accuracy'])
