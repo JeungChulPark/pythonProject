@@ -51,8 +51,8 @@ class ResNetTorch(nn.Module):
         if layer is not None:
             layers.append(layer(self.iter, self.in_channels, self.out_channels, self.kernel_size, self.strides))
         elif layeriter is not None:
-            # for i in range(num_res_blocks):
-            layers.append(layeriter(self.in_channels, self.out_channels, self.kernel_size, self.strides))
+            for i in range(num_res_blocks):
+                layers.append(layeriter(self.in_channels, self.out_channels, self.kernel_size, self.strides))
         return nn.Sequential(*layers)
 
     def forward(self, x):
