@@ -8,6 +8,8 @@ import torchvision.transforms as transforms
 import numpy as np
 from model.ConvNet import ConvNet
 from torch.utils.data import Dataset, DataLoader
+from model.ResNetTorch import ResNetTorch
+from model.ResnetLayer import ResnetLayer, ResnetLayerIter
 
 class CustomDataSet(Dataset):
     def __init__(self, path, transform=None):
@@ -34,7 +36,7 @@ class CustomDataSet(Dataset):
         img_blur = cv2.GaussianBlur(img_gray, (5, 5), 0)
         # ret, img_th = cv2.threshold(img_blur, 127, 255, cv2.THRESH_BINARY_INV)
         # resized_img = cv2.resize(img_th, dsize=(28, 28), interpolation=cv2.INTER_AREA)
-        resized_img = cv2.resize(img_gray, dsize=(28, 28), interpolation=cv2.INTER_AREA)
+        resized_img = cv2.resize(img_blur, dsize=(28, 28), interpolation=cv2.INTER_AREA)
         # scalingFactor = 1.0/255.0
         # resized_img = np.float32(resized_img)
         # resized_img = resized_img * scalingFactor
@@ -102,6 +104,20 @@ def DataTestLoad():
     test_loader = DataLoader(test_set, batch_size=batch_size)
     return test_loader
 
+
+def lr_schedule(self, epoch):
+    lr = 1e-3
+    if epoch > 180:
+        lr *= 0.5e-3
+    elif epoch > 160:
+        lr *= 1e-3
+    elif epoch > 120:
+        lr *= 1e-2
+    elif epoch > 80:
+        lr *= 1e-1
+    print('Learning rate : ', lr)
+    return lr
+
 def Train():
     train_loader = DataTrainLoad()
     for epoch in range(epochs):
@@ -134,6 +150,8 @@ def Train():
             correct += (preds==target).sum().item()
         print("Test Accuracy: ", 100.*correct/total, '%')
 
+
+
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.manual_seed(777)
 if device == 'cuda':
@@ -142,38 +160,49 @@ print(device + " is available")
 
 learning_rate = 0.001
 batch_size = 100
-epochs = 10
+epochs = 100
 num_classes = 10
 
 
-model = ConvNet().to(device)
+
+# model = ConvNet().to(device)
+
+n = 3
+version = 1
+if version == 1:
+    depth = n * 6 + 2
+elif version == 2:
+    depth = n * 9 + 2
+
+model = ResNetTorch(1, layer=ResnetLayer, layeriter=ResnetLayerIter, depth=depth, num_classes=num_classes).to(device)
 criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
-Train()
-torch.save(model.state_dict(), 'save/ConvNetModel10.pt')
+# Train()
+# torch.save(model.state_dict(), 'save/ResNet_V1_Model100.pt')
 
-# model.load_state_dict(torch.load('save/ConvNetModel10.pt'))
-# model.eval()
-#
-# transform = transforms.Compose(
-#     [
-#         transforms.ToTensor()
-#     ]
-# )
-# dataset = CustomDataSet(path='Image/Result', transform=transform)
-# dataloader = DataLoader(dataset, batch_size=batch_size)
-#
-# f = open("Image/Result/answer_ConvNet_model10.txt", 'w')
-# with torch.no_grad():
-#     for data in dataloader:
-#         # print(type(data))
-#         # print(data)
-#         # data = data.to(device, dtype=torch.float32)
-#         data = data.to(device)
-#         out = model(data)
-#         preds = torch.max(out.data, 1)[1]
-#         print(preds)
-#         for i in preds:
-#             f.write("%d\n" % i)
-# f.close()
+
+model.load_state_dict(torch.load('save/ResNet_V1_Model100.pt'))
+model.eval()
+
+transform = transforms.Compose(
+    [
+        transforms.ToTensor()
+    ]
+)
+dataset = CustomDataSet(path='Image/Result', transform=transform)
+dataloader = DataLoader(dataset, batch_size=batch_size)
+
+f = open("Image/Result/answer_ResNet_V1_model100.txt", 'w')
+with torch.no_grad():
+    for data in dataloader:
+        # print(type(data))
+        # print(data)
+        # data = data.to(device, dtype=torch.float32)
+        data = data.to(device)
+        out = model(data)
+        preds = torch.max(out.data, 1)[1]
+        print(preds)
+        for i in preds:
+            f.write("%d\n" % i)
+f.close()

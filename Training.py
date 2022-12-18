@@ -33,67 +33,25 @@ def Training():
     y_train = tf.keras.utils.to_categorical(y_train, 10)
     y_test = tf.keras.utils.to_categorical(y_test, 10)
     version = 3
-    if version == 0:
-        model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=64, input_shape=(28,28,1), padding='same', activation='relu'),
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=64, padding='same', activation='relu'),
-            tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=128, padding='same', activation='relu'),
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=256, padding='valid', activation='relu'),
-            tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=512, padding='same', activation='relu'),
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=1024, padding='valid', activation='relu'),
-            tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(units=1024, activation='relu'),
-            tf.keras.layers.Dropout(0.5),
-            tf.keras.layers.Dense(units=512, activation='relu'),
-            tf.keras.layers.Dropout(0.5),
-            tf.keras.layers.Dense(units=256, activation='relu'),
-            tf.keras.layers.Dropout(0.5),
-            tf.keras.layers.Dense(units=10, activation='softmax')
-        ])
-    elif version == 1:
-        model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=64, input_shape=(28, 28, 1), padding='valid',
-                                   activation='relu'),
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=64, padding='valid', activation='relu'),
-            tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=128, padding='valid', activation='relu'),
-            tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=256, padding='valid', activation='relu'),
-            tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
-            # tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=512, padding='same', activation='relu'),
-            # tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=1024, padding='valid', activation='relu'),
-            # tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(units=1024, activation='relu'),
-            tf.keras.layers.Dropout(0.5),
-            tf.keras.layers.Dense(units=512, activation='relu'),
-            tf.keras.layers.Dropout(0.5),
-            tf.keras.layers.Dense(units=256, activation='relu'),
-            tf.keras.layers.Dropout(0.5),
-            tf.keras.layers.Dense(units=10, activation='softmax')
-        ])
-
-    elif version == 2:
-        model = tf.keras.Sequential([
-            tf.keras.layers.Conv2D(kernel_size=(5, 5), filters=10, input_shape=(28, 28, 1), padding='valid',
-                                   activation='relu'),
-            tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
-            tf.keras.layers.Conv2D(kernel_size=(5, 5), filters=20, padding='valid', activation='relu'),
-            tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
-            # tf.keras.layers.Dropout(0.25),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(units=100, activation='relu'),
-            tf.keras.layers.Dense(units=10, activation='softmax')
-        ])
-
-    elif version == 3:
-        model = tf.keras.Sequential([
-            tf.keras.layers.Flatten(input_shape=(28, 28)),
-            tf.keras.layers.Dense(512, activation='relu'),
-            tf.keras.layers.Dense(10, activation='softmax')
-        ])
+    model = tf.keras.Sequential([
+        tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=64, input_shape=(28,28,1), padding='same', activation='relu'),
+        tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=64, padding='same', activation='relu'),
+        tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
+        tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=128, padding='same', activation='relu'),
+        tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=256, padding='valid', activation='relu'),
+        tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
+        tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=512, padding='same', activation='relu'),
+        tf.keras.layers.Conv2D(kernel_size=(3, 3), filters=1024, padding='valid', activation='relu'),
+        tf.keras.layers.MaxPool2D(pool_size=(2, 2)),
+        tf.keras.layers.Flatten(),
+        tf.keras.layers.Dense(units=1024, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(units=512, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(units=256, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(units=10, activation='softmax')
+    ])
 
     model.compile(loss='categorical_crossentropy', optimizer=tf.optimizers.Adam(lr=0.001), metrics=['accuracy'])
     model.summary()
@@ -336,21 +294,21 @@ def InferencingMNISTTransforLearning():
 # TrainingResNet(1)
 # TrainingResNetTransferLearning(2, 'saved_models/mnist_ResNet29v2_model.093.h5')
 
-# resnet = ResNet()
-# resnet.Train(1)
+resnet = ResNet()
+resnet.Train(1)
 
-v = GetFilePath()
-img_array = []
-print('inferencing : ')
-print("%d" % len(v))
-for file in v:
-    mnist_imgs = ResizeImage(file)
-    img_array.append(mnist_imgs)
-result_mnist_model = MultiImageTesting('mnist_model_modified_epoch10', img_array)
-print(result_mnist_model)
-
-f = open("Image/Result/answer_epoch10.txt", 'w')
-for result in result_mnist_model:
-    f.write("%d\n" % result)
-f.close()
+# v = GetFilePath()
+# img_array = []
+# print('inferencing : ')
+# print("%d" % len(v))
+# for file in v:
+#     mnist_imgs = ResizeImage(file)
+#     img_array.append(mnist_imgs)
+# result_mnist_model = MultiImageTesting('mnist_model_modified_epoch10', img_array)
+# print(result_mnist_model)
+#
+# f = open("Image/Result/answer_epoch10.txt", 'w')
+# for result in result_mnist_model:
+#     f.write("%d\n" % result)
+# f.close()
 
