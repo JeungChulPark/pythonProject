@@ -295,7 +295,7 @@ def InferencingMNISTTransforLearning():
 # TrainingResNetTransferLearning(2, 'saved_models/mnist_ResNet29v2_model.093.h5')
 
 resnet = ResNet()
-resnet.Train(1)
+resnet.Train(2)
 
 # v = GetFilePath()
 # img_array = []

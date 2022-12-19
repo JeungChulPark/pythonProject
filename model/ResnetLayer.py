@@ -122,4 +122,4 @@ class ResnetLayerIter(nn.Module):
         y = self.batnorm2d2(y)
         x = x + y
         x = F.relu(x)
-        return y
+        return x
