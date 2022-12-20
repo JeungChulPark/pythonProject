@@ -36,7 +36,7 @@ class ResnetLayerV2(nn.Module):
             self.out_channels = self.in_channels * 4
             self.conv4 = nn.Conv2d(self.in_channels, self.out_channels,
                                    self.kernel_size, self.strides, self.padding, self.dilation)
-            self.batnorm2d4 = nn.Conv2d(self.out_channels)
+            self.batnorm2d4 = nn.BatchNorm2d(self.out_channels)
 
             self.conv5 = nn.Conv2d(self.in_channels, self.out_channels,
                                    self.kernel_size, self.strides, self.padding, self.dilation)
