@@ -10,6 +10,7 @@ from model.ConvNet import ConvNet
 from torch.utils.data import Dataset, DataLoader
 from model.ResNetTorch import ResNetTorch
 from model.ResnetLayer import ResnetLayer, ResnetLayerIter
+from model.ResnetLayerV2 import ResnetLayerV2, ResnetLayerV2Iter
 
 class CustomDataSet(Dataset):
     def __init__(self, path, transform=None):
@@ -160,7 +161,7 @@ print(device + " is available")
 
 learning_rate = 0.001
 batch_size = 100
-epochs = 100
+epochs = 10
 num_classes = 10
 
 
@@ -174,35 +175,35 @@ if version == 1:
 elif version == 2:
     depth = n * 9 + 2
 
-model = ResNetTorch(1, layer=ResnetLayer, layeriter=ResnetLayerIter, depth=depth, num_classes=num_classes).to(device)
+model = ResNetTorch(1, layer=ResnetLayerV2, layeriter=ResnetLayerV2Iter, depth=depth, num_classes=num_classes).to(device)
 criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
-# Train()
-# torch.save(model.state_dict(), 'save/ResNet_V1_Model100.pt')
+Train()
+torch.save(model.state_dict(), 'save/ResNet_V2_Model10.pt')
 
 
-model.load_state_dict(torch.load('save/ResNet_V1_Model100.pt'))
-model.eval()
-
-transform = transforms.Compose(
-    [
-        transforms.ToTensor()
-    ]
-)
-dataset = CustomDataSet(path='Image/Result', transform=transform)
-dataloader = DataLoader(dataset, batch_size=batch_size)
-
-f = open("Image/Result/answer_ResNet_V1_model100.txt", 'w')
-with torch.no_grad():
-    for data in dataloader:
-        # print(type(data))
-        # print(data)
-        # data = data.to(device, dtype=torch.float32)
-        data = data.to(device)
-        out = model(data)
-        preds = torch.max(out.data, 1)[1]
-        print(preds)
-        for i in preds:
-            f.write("%d\n" % i)
-f.close()
+# model.load_state_dict(torch.load('save/ResNet_V1_Model100.pt'))
+# model.eval()
+#
+# transform = transforms.Compose(
+#     [
+#         transforms.ToTensor()
+#     ]
+# )
+# dataset = CustomDataSet(path='Image/Result', transform=transform)
+# dataloader = DataLoader(dataset, batch_size=batch_size)
+#
+# f = open("Image/Result/answer_ResNet_V1_model100.txt", 'w')
+# with torch.no_grad():
+#     for data in dataloader:
+#         # print(type(data))
+#         # print(data)
+#         # data = data.to(device, dtype=torch.float32)
+#         data = data.to(device)
+#         out = model(data)
+#         preds = torch.max(out.data, 1)[1]
+#         print(preds)
+#         for i in preds:
+#             f.write("%d\n" % i)
+# f.close()
