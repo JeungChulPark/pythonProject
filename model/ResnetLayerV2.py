@@ -61,24 +61,35 @@ class ResnetLayerV2(nn.Module):
             self.kernel_size = 1
             self.padding = 0
             # (64, 64) (14, 14) stride = 2
+            # (128, 128) (7, 7) stride = 2
+            if iter == 1:
+                self.in_channels = in_channels * 4
+            else:
+                self.in_channels = in_channels * 2
             self.conv1 = nn.Conv2d(self.in_channels, self.out_channels,
                                    self.kernel_size, self.strides, self.padding, self.dilation)
             self.batnorm2d2 = nn.BatchNorm2d(self.out_channels)
             self.strides = 1
             self.kernel_size = 3
             self.padding = 1
+            # (64, 64) (14, 14) stride = 1
+            # (128, 128) (7, 7) stride = 1
             self.conv2 = nn.Conv2d(self.in_channels, self.out_channels,
                                    self.kernel_size, self.strides, self.padding, self.dilation)
             self.batnorm2d3 = nn.BatchNorm2d(self.out_channels)
             self.strides = 1
             self.kernel_size = 1
             self.padding = 0
+            # (64, 128) (14, 14) stride = 1
+            # (128, 256) (7, 7) stride = 1
+            self.out_channels = self.out_channels * 2
             self.conv3 = nn.Conv2d(self.in_channels, self.out_channels,
                                    self.kernel_size, self.strides, self.padding, self.dilation)
             self.strides = 2
             self.kernel_size = 1
             self.padding = 0
-            self.out_channels = self.in_channels * 2
+            # (64, 128) (14, 14) stride = 2
+            # (128, 256) (7, 7) stride = 2
             self.conv4 = nn.Conv2d(self.in_channels, self.out_channels,
                                    self.kernel_size, self.strides, self.padding, self.dilation)
 
@@ -114,31 +125,45 @@ class ResnetLayerV2(nn.Module):
         return x
 
 class ResnetLayerV2Iter(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, strides=1, padding=1, dilation=1):
+    def __init__(self, iter, in_channels, out_channels, kernel_size=3, strides=1, padding=1, dilation=1):
         super(ResnetLayerV2Iter, self).__init__()
+        self.iter = iter
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.strides = strides
         self.padding = padding
         self.dilation = dilation
-
+        # (16, 64)
+        # (64, 128)
         self.batnorm2d1 = nn.BatchNorm2d(self.out_channels)
-        # (64, 16) stride = 1
+        # (64, 16) stride = 1 kernel_size = 1
+        # (128, 64) stride = 1 kernel_size = 1
         self.out_channels = in_channels
         self.in_channels = out_channels
+        self.kernel_size = 1
+        self.padding = 0
         self.conv1 = nn.Conv2d(self.in_channels, self.out_channels,
                                self.kernel_size, self.strides, self.padding, self.dilation)
 
         self.batnorm2d2 = nn.BatchNorm2d(self.out_channels)
         # (16, 16) stride = 1
+        # (64, 64) stride = 1
         self.in_channels = in_channels
+        self.kernel_size = 3
+        self.padding = 1
         self.conv2 = nn.Conv2d(self.in_channels, self.out_channels,
                                 self.kernel_size, self.strides, self.padding, self.dilation)
 
         self.batnorm2d3 = nn.BatchNorm2d(self.out_channels)
         # (16, 64) stride = 1
-        self.out_channels = in_channels * 4
+        # (64, 128) stride = 1
+        if iter == 0:
+            self.out_channels = in_channels * 4
+        else:
+            self.out_channels = in_channels * 2
+        self.kernel_size = 1
+        self.padding = 0
         self.conv3 = nn.Conv2d(self.in_channels, self.out_channels,
                                 self.kernel_size, self.strides, self.padding, self.dilation)
 

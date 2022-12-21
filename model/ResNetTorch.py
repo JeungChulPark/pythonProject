@@ -80,7 +80,7 @@ class ResNetTorch(nn.Module):
             self.batnorm2d = nn.BatchNorm2d(self.out_channels)
             self.avgpool2d = nn.AvgPool2d(kernel_size=4)
             self.flatten = nn.Flatten()
-            self.fc1 = nn.Linear(7*7*64, 128)
+            self.fc1 = nn.Linear(256, 128)
             self.dropout = nn.Dropout(p=0.5)
             self.fc2 = nn.Linear(128, 64)
             self.fc3 = nn.Linear(64, 10)
@@ -91,7 +91,7 @@ class ResNetTorch(nn.Module):
             layers.append(layer(self.iter, self.in_channels, self.out_channels, self.kernel_size, self.strides))
         elif layeriter is not None:
             for i in range(num_res_blocks):
-                layers.append(layeriter(self.in_channels, self.out_channels, self.kernel_size, self.strides))
+                layers.append(layeriter(self.iter, self.in_channels, self.out_channels, self.kernel_size, self.strides))
         return nn.Sequential(*layers)
 
     def forward(self, x):
@@ -99,7 +99,7 @@ class ResNetTorch(nn.Module):
             self.ResnetV1(x)
         else:
             self.ResnetV2(x)
-        return F.softmax(x)
+        return x
 
     def ResnetV1(self, x):
         x = self.layer1(x)
