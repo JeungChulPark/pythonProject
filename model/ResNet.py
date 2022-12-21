@@ -139,7 +139,6 @@ class ResNet(object):
                     if res_block == 0:
                         strides = 2
 
-                print("first ResnetLayer %d" % strides)
                 y = self.ResnetLayer(inputs=x,
                                 num_filters=num_filters_in,
                                 kernel_size=1,
@@ -155,7 +154,6 @@ class ResNet(object):
                                 kernel_size=1,
                                 conv_first=False)
                 if res_block == 0:
-                    print("4th ResnetLayer %d" % strides)
                     x = self.ResnetLayer(inputs=x,
                                     num_filters=num_filters_out,
                                     kernel_size=1,
