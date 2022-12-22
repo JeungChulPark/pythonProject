@@ -21,6 +21,7 @@ class ResNetTorch(nn.Module):
             # (1, 16) stride = 1
             num_res_blocks = int((depth - 2) / 6)
             self.layer1 = self._make_layer(layer, layeriter=None)
+            # (16, 16) stride = 1
             self.in_channels = self.out_channels
             self.layer2 = self._make_layer(layer=None, layeriter=layeriter, num_res_blocks=num_res_blocks)
             # (16, 32) stride = 2
@@ -28,6 +29,7 @@ class ResNetTorch(nn.Module):
             self.out_channels = self.out_channels * 2
             self.strides = 2
             self.layer3 = self._make_layer(layer, layeriter=None)
+            # (32, 32) stride = 1
             self.in_channels = self.out_channels
             self.strides = 1
             self.layer4 = self._make_layer(layer=None, layeriter=layeriter, num_res_blocks=num_res_blocks)
@@ -36,6 +38,7 @@ class ResNetTorch(nn.Module):
             self.out_channels = self.out_channels * 2
             self.strides = 2
             self.layer5 = self._make_layer(layer, layeriter=None)
+            # (64, 64) stride = 1
             self.in_channels = self.out_channels
             self.strides = 1
             self.layer6 = self._make_layer(layer=None, layeriter=layeriter, num_res_blocks=num_res_blocks)
@@ -46,7 +49,8 @@ class ResNetTorch(nn.Module):
             self.fc1 = nn.Linear(64, 32)
             self.dropout = nn.Dropout(p=0.5)
             self.fc2 = nn.Linear(32, 10)
-        else:
+
+        elif self.version == 2:
             # (1, 16) stride = 1
             num_res_blocks = int((depth - 2) / 6)
             self.layer1 = self._make_layer(layer, layeriter=None)
@@ -84,6 +88,15 @@ class ResNetTorch(nn.Module):
             self.dropout = nn.Dropout(p=0.5)
             self.fc2 = nn.Linear(128, 64)
             self.fc3 = nn.Linear(64, 10)
+        else:
+            self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+            self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+            self.drop2D = nn.Dropout2d(p=0.25, inplace=False)
+            self.mp = nn.MaxPool2d(2)
+            self.fc1 = nn.Linear(320, 100)
+            self.fc2 = nn.Linear(100, 10)
+            self.drop1D = nn.Dropout(p=0.5)
+            self.relu = nn.ReLU(inplace=True)
 
     def _make_layer(self, layer=None, layeriter=None, num_res_blocks=0):
         layers = []
@@ -96,10 +109,18 @@ class ResNetTorch(nn.Module):
 
     def forward(self, x):
         if self.version == 1:
-            self.ResnetV1(x)
+            x = self.ResnetV1(x)
+        elif self.version == 2:
+            x = self.ResnetV2(x)
         else:
-            self.ResnetV2(x)
-        return x
+            x = self.mp(F.relu(self.conv1(x)))
+            x = self.mp(F.relu(self.conv2(x)))
+            x = self.drop2D(x)
+            x = x.view(x.size(0), -1)
+            x = F.relu(self.fc1(x))
+            x = self.drop1D(x)
+            x = self.fc2(x)
+        return F.log_softmax(x, dim=1)
 
     def ResnetV1(self, x):
         x = self.layer1(x)
