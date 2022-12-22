@@ -11,6 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 from model.ResNetTorch import ResNetTorch
 from model.ResnetLayer import ResnetLayer, ResnetLayerIter
 from model.ResnetLayerV2 import ResnetLayerV2, ResnetLayerV2Iter
+from model.ResnetBlockLayer import ResnetBlockLayer
 
 class CustomDataSet(Dataset):
     def __init__(self, path, transform=None):
@@ -168,23 +169,23 @@ num_classes = 10
 # model = ConvNet().to(device)
 
 n = 1
-version = 2
+version = 3
 if version == 1:
     depth = n * 6 + 2
 elif version == 2:
     depth = n * 9 + 2
 else:
-    depth = 10
+    depth = n * 6 + 2
 
-model = ResNetTorch(version=version, layer=ResnetLayerV2, layeriter=ResnetLayerV2Iter, depth=depth, num_classes=num_classes).to(device)
+model = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
 criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
 Train()
-torch.save(model.state_dict(), 'save/ResNet_V2_Model100.pt')
+torch.save(model.state_dict(), 'save/ResNet_V3_Model100.pt')
 
 
-# model.load_state_dict(torch.load('save/ResNet_V1_Model100.pt'))
+# model.load_state_dict(torch.load('save/ResNet_V2_Model100.pt'))
 # model.eval()
 #
 # transform = transforms.Compose(
@@ -195,7 +196,7 @@ torch.save(model.state_dict(), 'save/ResNet_V2_Model100.pt')
 # dataset = CustomDataSet(path='Image/Result', transform=transform)
 # dataloader = DataLoader(dataset, batch_size=batch_size)
 #
-# f = open("Image/Result/answer_ResNet_V1_model100.txt", 'w')
+# f = open("Image/Result/answer_ResNet_V2_model100.txt", 'w')
 # with torch.no_grad():
 #     for data in dataloader:
 #         # print(type(data))
