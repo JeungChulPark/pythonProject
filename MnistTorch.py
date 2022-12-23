@@ -168,16 +168,19 @@ num_classes = 10
 
 # model = ConvNet().to(device)
 
-n = 1
-version = 3
+n = 2
+version = 4
 if version == 1:
     depth = n * 6 + 2
 elif version == 2:
     depth = n * 9 + 2
-else:
+elif version == 3:
     depth = n * 6 + 2
+elif version == 4:
+    depth = n * 9 + 2
 
 model = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
+# model = ResNetTorch(version=version, layer=ResnetLayer, layeriter=ResnetLayerIter, depth=depth, num_classes=num_classes).to(device)
 criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
