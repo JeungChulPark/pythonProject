@@ -47,7 +47,7 @@ class PatchEmbedding(nn.Module):
         return x
 
 class MultiHeadAttention(nn.Module):
-    def __init__(self, emb_size=768, num_heads=8, dropout=0.0):
+    def __init__(self, emb_size: int = 768, num_heads: int = 8, dropout: float = 0.0):
         super().__init__()
         self.emb_size = emb_size
         self.num_heads = num_heads
@@ -60,7 +60,7 @@ class MultiHeadAttention(nn.Module):
         self.projection = nn.Linear(emb_size, emb_size)
 
     def forward(self, x: Tensor, mask: Tensor = None) -> Tensor:
-        # 8 196 (8 96 3) -> (3) 8 8 196 96
+        # 8 196 (8 32 3) -> (3) 8 8 196 32
         qkv = rearrange(self.qkv(x), "b n (h d qkv) -> (qkv) b h n d", h=self.num_heads, qkv=3)
         queries = qkv[0]
         keys = qkv[1]
@@ -149,4 +149,4 @@ class ViT(nn.Sequential):
             ClassficationHead(emb_size, n_classes)
         )
 
-summary(ViT(), (3, 224, 224), device='cuda')
+summary(ViT(), (3, 224, 224), device='cpu')
