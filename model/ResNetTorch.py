@@ -146,18 +146,21 @@ class ResNetTorch(nn.Module):
                                                   out_channels=self.out_channels,
                                                   kernel_size=1,
                                                   strides=strides,
-                                                  padding=0))
+                                                  padding=0,
+                                                  conv_first=False))
 
                     self.in_channels = in_channels
                     block.append(self._make_block(layer=layer,
                                                   in_channels=self.in_channels,
-                                                  out_channels=self.out_channels))
+                                                  out_channels=self.out_channels,
+                                                  conv_first=False))
 
                     block.append(self._make_block(layer=layer,
                                                   in_channels=self.in_channels,
                                                   out_channels=out_channels,
                                                   kernel_size=1,
-                                                  padding=0))
+                                                  padding=0,
+                                                  conv_first=False))
                     if res_block == 0:
                         block.append(self._make_block(layer=layer,
                                                       in_channels=self.in_channels,
@@ -194,11 +197,12 @@ class ResNetTorch(nn.Module):
                     out_channels=16,
                     kernel_size=3,
                     strides=1,
-                    padding=1):
+                    padding=1,
+                    conv_first=True):
         # layers = []
         # layers.append(layer(in_channels, out_channels, kernel_size, strides, padding))
         # return nn.Sequential(layer(in_channels, out_channels, kernel_size, strides, padding))
-        return layer(in_channels, out_channels, kernel_size, strides, padding)
+        return layer(in_channels, out_channels, kernel_size, strides, padding, conv_first)
 
     def forward(self, x):
         if self.version == 1:
@@ -237,11 +241,11 @@ class ResNetTorch(nn.Module):
                             activation = None
                             batch_normalization = False
 
-                    y = self.blocks[i](x, activation=activation, batch_normalization=batch_normalization, conv_first=False)
+                    y = self.blocks[i](x, activation=activation, batch_normalization=batch_normalization)
                     i += 1
-                    y = self.blocks[i](y, conv_first=False)
+                    y = self.blocks[i](y)
                     i += 1
-                    y = self.blocks[i](y, conv_first=False)
+                    y = self.blocks[i](y)
                     i += 1
                     if res_block == 0:
                         x = self.blocks[i](x, activation=activation, batch_normalization=False)

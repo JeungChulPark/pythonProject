@@ -21,9 +21,9 @@ class Conv2dSamePadding(nn.Conv2d):
         return self._conv_forward(self.zero_pad_2d(input), self.weight, self.bias)
 
 class ConvNet(nn.Module):
-    def __init__(self):
+    def __init__(self, version):
         super(ConvNet, self).__init__()
-        self.version = 1
+        self.version = version
         if self.version == 0:
             self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
             self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
@@ -35,16 +35,19 @@ class ConvNet(nn.Module):
             self.relu = nn.ReLU(inplace=True)
 
         elif self.version == 1:
-            self.conv1 = Conv2dSamePadding(1, 64, kernel_size=3)
-            self.conv2 = Conv2dSamePadding(64, 64, kernel_size=3)
-            self.conv3 = Conv2dSamePadding(64, 128, kernel_size=3)
-            self.conv4 = nn.Conv2d(128, 256, kernel_size=3)
-            self.conv5 = Conv2dSamePadding(256, 512, kernel_size=3)
-            self.conv6 = nn.Conv2d(512, 1024, kernel_size=3)
-            # self.conv1 = nn.Conv2d(1, 64, kernel_size=3)
-            # self.conv2 = nn.Conv2d(64, 64, kernel_size=3)
-            # self.conv3 = nn.Conv2d(64, 128, kernel_size=3)
+            # self.conv1 = Conv2dSamePadding(1, 64, kernel_size=3)
+            # self.conv2 = Conv2dSamePadding(64, 64, kernel_size=3)
+            # self.conv3 = Conv2dSamePadding(64, 128, kernel_size=3)
             # self.conv4 = nn.Conv2d(128, 256, kernel_size=3)
+            # self.conv5 = Conv2dSamePadding(256, 512, kernel_size=3)
+            # self.conv6 = nn.Conv2d(512, 1024, kernel_size=3)
+
+            self.conv1 = nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1)
+            self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+            self.conv3 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
+            self.conv4 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=0)
+            self.conv5 = nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1)
+            self.conv6 = nn.Conv2d(512, 1024, kernel_size=3, stride=1, padding=0)
             self.drop2D = nn.Dropout2d(p=0.25, inplace=False)
             self.mp = nn.MaxPool2d(2)
             self.fc1 = nn.Linear(4096, 1024)
@@ -76,7 +79,7 @@ class ConvNet(nn.Module):
             x = self.mp(F.relu(self.conv2(F.relu(self.conv1(x)))))
             # x = self.drop2D(x)
             x = self.mp(F.relu(self.conv4(F.relu(self.conv3(x)))))
-            # x = self.drop2D(x)
+            x = self.drop2D(x)
             x = self.mp(F.relu(self.conv6(F.relu(self.conv5(x)))))
             x = x.view(x.size(0), -1)
             x = F.relu(self.fc1(x))
