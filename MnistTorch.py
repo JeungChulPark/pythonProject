@@ -173,9 +173,10 @@ batch_size = 100
 epochs = 100
 num_classes = 10
 
+from model.ViT import ViT
 
-model = ConvNet(1).to(device)
-
+# model = ConvNet(1).to(device)
+model = ViT().to(device)
 # n = 2
 # version = 4
 # if version == 1:
@@ -193,9 +194,9 @@ criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
 # Train()
-# torch.save(model.state_dict(), 'save/ConvNet_V2_Model100.pt')
+# torch.save(model.state_dict(), 'save/Transformer_Model10.pt')
 
-model.load_state_dict(torch.load('save/ConvNet_V2_Model100_tl.pt'))
+model.load_state_dict(torch.load('save/Transformer_Model10.pt'))
 model.eval()
 
 transform = transforms.Compose(
@@ -207,7 +208,7 @@ dataset = CustomDataSet(path='Image/Result', transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size)
 
 res = []
-f = open("Image/Result/answer_ConvNet_V2_model100_tl", 'w')
+f = open("Image/Result/answer_Transformer_model10.txt", 'w')
 with torch.no_grad():
     for data in dataloader:
         data = data.to(device)

@@ -16,7 +16,8 @@ from torchsummary import summary
 
 class PatchEmbedding(nn.Module):
     #def __init__(self, in_channels: int = 3, patch_size: int = 16, emb_size: int = 768, img_size: int = 224):
-    def __init__(self, in_channels: int = 3, patch_size: int = 8, emb_size: int = 192, img_size: int = 32):
+    #def __init__(self, in_channels: int = 3, patch_size: int = 8, emb_size: int = 192, img_size: int = 32):
+    def __init__(self, in_channels: int = 1, patch_size: int = 7, emb_size: int = 49, img_size: int = 28):
         self.patch_size = patch_size
         super().__init__()
         self.projection = nn.Sequential(
@@ -50,13 +51,18 @@ class PatchEmbedding(nn.Module):
 
 class MultiHeadAttention(nn.Module):
     # def __init__(self, emb_size: int = 768, num_heads: int = 8, dropout: float = 0.0):
-    def __init__(self, emb_size: int = 192, num_heads: int = 8, dropout: float = 0.0):
+    # def __init__(self, emb_size: int = 192, num_heads: int = 8, dropout: float = 0.0):
+    def __init__(self, emb_size: int = 49, num_heads: int = 7, dropout: float = 0.0):
         super().__init__()
         self.emb_size = emb_size
         self.num_heads = num_heads
 
         # QKV
-        self.qkv = nn.Linear(emb_size, emb_size * 3)
+        # self.qkv = nn.Linear(emb_size, emb_size * 3)
+        self.queries = nn.Linear(emb_size, emb_size)
+        self.keys = nn.Linear(emb_size, emb_size)
+        self.values = nn.Linear(emb_size, emb_size)
+
         self.att_drop = nn.Dropout(p=dropout)
 
         #Linear Projection
@@ -64,10 +70,14 @@ class MultiHeadAttention(nn.Module):
 
     def forward(self, x: Tensor, mask: Tensor = None) -> Tensor:
         # 8 197 (8 96 3) -> (3) 8 8 197 96
-        qkv = rearrange(self.qkv(x), "b n (h d qkv) -> (qkv) b h n d", h=self.num_heads, qkv=3)
-        queries = qkv[0]
-        keys = qkv[1]
-        values = qkv[2]
+        # qkv = rearrange(self.qkv(x), "b n (h d qkv) -> (qkv) b h n d", h=self.num_heads, qkv=3)
+        # queries = qkv[0]
+        # keys = qkv[1]
+        # values = qkv[2]
+
+        queries = rearrange(self.queries(x), "b n (h d) -> b h n d", h=self.num_heads)
+        keys = rearrange(self.keys(x), "b n (h d) -> b h n d", h=self.num_heads)
+        values = rearrange(self.values(x), "b n (h d) -> b h n d", h=self.num_heads)
 
         # sum
         energy = torch.einsum('bhqd, bhkd -> bhqk', queries, keys)
@@ -105,7 +115,9 @@ class FeedForwardBlock(nn.Sequential):
 
 class TransformerEncoderBlock(nn.Sequential):
     def __init__(self,
-                 emb_size=768,
+                 # emb_size=768,
+                 # emb_size=192,
+                 emb_size=49,
                  drop_p=0.,
                  forward_expansion=4,
                  forward_drop_p=0.,
@@ -130,7 +142,9 @@ class TransformerEncoder(nn.Sequential):
         super().__init__(*[TransformerEncoderBlock(**kwargs) for _ in range(depth)])
 
 class ClassficationHead(nn.Sequential):
-    def __init__(self, emb_size=768, n_classes=1000):
+    # def __init__(self, emb_size=768, n_classes=1000):
+    # def __init__(self, emb_size=192, n_classes=10):
+    def __init__(self, emb_size=49, n_classes=10):
         super().__init__(
             Reduce('b n e -> b e', reduction='mean'),
             nn.LayerNorm(emb_size),
@@ -139,13 +153,17 @@ class ClassficationHead(nn.Sequential):
 
 class ViT(nn.Sequential):
     def __init__(self,
-                 in_channels: int = 3,
+                 # in_channels: int = 3,
                  # patch_size: int = 16,
                  # emb_size: int = 768,
                  # img_size: int = 224,
-                 patch_size: int = 8,
-                 emb_size: int = 192,
-                 img_size: int = 32,
+                 # patch_size: int = 8,
+                 # emb_size: int = 192,
+                 # img_size: int = 32,
+                 in_channels: int = 1,
+                 patch_size: int = 7,
+                 emb_size: int = 49,
+                 img_size: int = 28,
                  depth: int = 12,
                  # n_classes: int = 1000,
                  n_classes: int = 10,
@@ -156,7 +174,7 @@ class ViT(nn.Sequential):
             ClassficationHead(emb_size, n_classes)
         )
 
-# summary(ViT(), (3, 32, 32), device='cpu')
+summary(ViT(), (1, 28, 28), device='cpu')
 
 class Net(nn.Module):
     def __init__(self):
