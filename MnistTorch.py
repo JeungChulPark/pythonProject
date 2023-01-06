@@ -12,7 +12,8 @@ from model.ResNetTorch import ResNetTorch
 from model.ResnetLayer import ResnetLayer, ResnetLayerIter
 from model.ResnetLayerV2 import ResnetLayerV2, ResnetLayerV2Iter
 from model.ResnetBlockLayer import ResnetBlockLayer
-
+from model.ViT import ViT
+from model.Distillation import Teacher, Student
 class CustomDataSet(Dataset):
     def __init__(self, target=None, path='', transform=None):
         self.path = path
@@ -173,9 +174,8 @@ batch_size = 100
 epochs = 100
 num_classes = 10
 
-
-model = ConvNet(1).to(device)
-
+# model = ConvNet(1).to(device)
+model = ViT().to(device)
 # n = 2
 # version = 4
 # if version == 1:
@@ -193,34 +193,32 @@ criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
 # Train()
-# torch.save(model.state_dict(), 'save/ConvNet_V2_Model100.pt')
+# torch.save(model.state_dict(), 'save/Transformer_Model10.pt')
 
-model.load_state_dict(torch.load('save/ConvNet_V2_Model100_tl.pt'))
-model.eval()
-
-transform = transforms.Compose(
-    [
-        transforms.ToTensor()
-    ]
-)
-dataset = CustomDataSet(path='Image/Result', transform=transform)
-dataloader = DataLoader(dataset, batch_size=batch_size)
-
-res = []
-f = open("Image/Result/answer_ConvNet_V2_model100_tl", 'w')
-with torch.no_grad():
-    for data in dataloader:
-        data = data.to(device)
-        out = model(data)
-        preds = torch.max(out.data, 1)[1]
-        res.append(preds.to('cpu'))
-        # res = np.append(res, preds.to('cpu'))
-        # print(preds)
-        for i in preds:
-            f.write("%d\n" % i)
-f.close()
-
-
+# model.load_state_dict(torch.load('save/Transformer_Model10.pt'))
+# model.eval()
+#
+# transform = transforms.Compose(
+#     [
+#         transforms.ToTensor()
+#     ]
+# )
+# dataset = CustomDataSet(path='Image/Result', transform=transform)
+# dataloader = DataLoader(dataset, batch_size=batch_size)
+#
+# res = []
+# f = open("Image/Result/answer_Transformer_model10.txt", 'w')
+# with torch.no_grad():
+#     for data in dataloader:
+#         data = data.to(device)
+#         out = model(data)
+#         preds = torch.max(out.data, 1)[1]
+#         res.append(preds.to('cpu'))
+#         # res = np.append(res, preds.to('cpu'))
+#         # print(preds)
+#         for i in preds:
+#             f.write("%d\n" % i)
+# f.close()
 # for i in range(len(res)):
 #     if i == 0:
 #         tmp = res[i]
