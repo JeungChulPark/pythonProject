@@ -174,7 +174,7 @@ class ViT(nn.Sequential):
             ClassficationHead(emb_size, n_classes)
         )
 
-summary(ViT(), (1, 28, 28), device='cpu')
+# summary(ViT(), (1, 28, 28), device='cpu')
 
 class Net(nn.Module):
     def __init__(self):

@@ -11,6 +11,9 @@ import copy
 from torchvision.transforms.functional import to_pil_image
 import matplotlib.pyplot as plt
 # %matplotlib inline
+from tqdm import tqdm
+from time import sleep
+
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def createFoloder(directory):
@@ -20,7 +23,7 @@ def createFoloder(directory):
     except OSError:
         print('Error')
 
-createFoloder('./content/data')
+createFoloder('../data')
 
 ds_transform = transforms.Compose(
     [
@@ -29,8 +32,8 @@ ds_transform = transforms.Compose(
     ]
 )
 
-train_ds = datasets.MNIST('./content/data', train=True, download=True, transform=ds_transform)
-val_ds = datasets.MNIST('./content/data', train=False, download=True, transform=ds_transform)
+train_ds = datasets.MNIST('../data', train=True, download=True, transform=ds_transform)
+val_ds = datasets.MNIST('../data', train=False, download=True, transform=ds_transform)
 
 train_dl = DataLoader(train_ds, batch_size=64, shuffle=True)
 val_dl = DataLoader(val_ds, batch_size=128, shuffle=True)
@@ -114,21 +117,23 @@ def loss_epoch(model, loss_func, dataset_dl, sanity_check=False, opt=None):
     running_loss = 0.0
     running_metric = 0.0
     len_data = len(dataset_dl.dataset)
+    with tqdm(dataset_dl, unit="batch") as tepoch:
+        for xb, yb in tepoch:
+            xb = xb.to(device)
+            yb = yb.to(device)
+            output = model(xb)
 
-    for xb, yb in dataset_dl:
-        xb = xb.to(device)
-        yb = yb.to(device)
-        output = model(xb)
+            loss_b, metric_b = loss_batch(loss_func, output, yb, opt)
 
-        loss_b, metric_b = loss_batch(loss_func, output, yb, opt)
+            running_loss += loss_b
 
-        running_loss += loss_b
+            if metric_b is not None:
+                running_metric += metric_b
 
-        if metric_b is not None:
-            running_metric += metric_b
+            if sanity_check is True:
+                break
+        sleep(0.1)
 
-        if sanity_check is True:
-            break
     loss = running_loss / len_data
     metric = running_metric / len_data
 
@@ -190,10 +195,10 @@ params_train = {
     'val_dl': val_dl,
     'sanity_check': False,
     'lr_scheduler': lr_scheduler,
-    'path2weights':'./save/teacher_weights.pt'
+    'path2weights':'../save/teacher_weights.pt'
 }
 
-createFoloder('./save')
+createFoloder('../save')
 
 teacher, loss_hist, metric_hist = train_val(teacher, params_train)
 
@@ -239,7 +244,7 @@ print(output.shape)
 student.apply(initialize_weights)
 
 teacher = Teacher().to(device)
-teacher.load_state_dict(torch.load('./save/teacher_weights.pt'))
+teacher.load_state_dict(torch.load('../save/teacher_weights.pt'))
 student = Student().to(device)
 
 opt = optim.Adam(student.parameters())
@@ -251,9 +256,10 @@ def distillation(y, labels, teacher_scores, T, alpha):
     labels: hard label
     teacher_scores: soft label
     '''
-    return nn.KLDivLoss()(F.log_softmax(y/T, dim=0),
-                          F.softmax(teacher_scores/T) * (T*T*2.0+alpha) +
-                          F.cross_entropy(y, labels) * (1.-alpha))
+    return nn.KLDivLoss()(F.log_softmax(y/T, dim=1),
+                         # F.softmax(teacher_scores/T, dim=1) * (T*T*2.0+alpha) +
+                          F.softmax(teacher_scores / T, dim=1)) * (T * T * alpha) + \
+                          F.cross_entropy(y, labels) * (1.-alpha)
 
 loss_func = nn.CrossEntropyLoss()
 
@@ -284,17 +290,18 @@ for epoch in range(num_epochs):
     running_loss = 0.0
     running_metric = 0.0
     len_data = len(train_dl.dataset)
+    with tqdm(train_dl, unit="batch") as tepoch:
+        for xb, yb in tepoch:
+            xb = xb.to(device)
+            yb = yb.to(device)
 
-    for xb, yb in train_dl:
-        xb = xb.to(device)
-        yb = yb.to(device)
+            output = student(xb)
+            teacher_output = teacher(xb).detach()
+            loss_b, metric_b = distill_lossbatch(output, yb, teacher_output, loss_fn=distillation, opt=opt)
 
-        output = student(xb)
-        teacher_output = teacher(xb).detach()
-        loss_b, metric_b = distill_lossbatch(output, yb, teacher_output, loss_fn=distillation, opt=opt)
-
-        running_loss += loss_b
-        running_metric_b = metric_b
+            running_loss += loss_b
+            running_metric = metric_b
+        sleep(0.1)
 
     train_loss = running_loss / len_data
     train_metric = running_metric / len_data
@@ -315,19 +322,19 @@ for epoch in range(num_epochs):
           (train_loss, val_loss, 100*val_metric, (time.time()-start_time)/60))
     print('-'*10)
 
-# plt.title('Train-Val Loss')
-# plt.plot(range(1, num_epochs + 1), loss_hist['train'], label='train')
-# plt.plot(range(1, num_epochs + 1), loss_hist['val'], label='val')
-# plt.ylabel('Loss')
-# plt.xlabel('Training Epochs')
-# plt.legend()
-# plt.show()
-#
-# # plot train-val accuracy
-# plt.title('Train-Val Accuracy')
-# plt.plot(range(1, num_epochs + 1), metric_hist['train'], label='train')
-# plt.plot(range(1, num_epochs + 1), metric_hist['val'], label='val')
-# plt.ylabel('Accuracy')
-# plt.xlabel('Training Epochs')
-# plt.legend()
-# plt.show()
+plt.title('Train-Val Loss')
+plt.plot(range(1, num_epochs + 1), loss_history['train'], label='train')
+plt.plot(range(1, num_epochs + 1), loss_history['val'], label='val')
+plt.ylabel('Loss')
+plt.xlabel('Training Epochs')
+plt.legend()
+plt.show()
+
+# plot train-val accuracy
+plt.title('Train-Val Accuracy')
+plt.plot(range(1, num_epochs + 1), metric_history['train'], label='train')
+plt.plot(range(1, num_epochs + 1), metric_history['val'], label='val')
+plt.ylabel('Accuracy')
+plt.xlabel('Training Epochs')
+plt.legend()
+plt.show()

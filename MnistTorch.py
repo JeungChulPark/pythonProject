@@ -12,6 +12,10 @@ from model.ResNetTorch import ResNetTorch
 from model.ResnetLayer import ResnetLayer, ResnetLayerIter
 from model.ResnetLayerV2 import ResnetLayerV2, ResnetLayerV2Iter
 from model.ResnetBlockLayer import ResnetBlockLayer
+from model.ViT import ViT
+from tqdm import tqdm
+from time import sleep
+
 
 class CustomDataSet(Dataset):
     def __init__(self, target=None, path='', transform=None):
@@ -121,19 +125,9 @@ def Train(dataloader=None):
     train_loader = DataTrainLoad()
 
     for epoch in range(epochs):
-        avg_cost = 0
-        for data, target in train_loader:
-            data = data.to(device)
-            target = target.to(device)
-            optimizer.zero_grad()
-            hypothesis = model(data)
-            cost = criterion(hypothesis, target)
-            cost.backward()
-            optimizer.step()
-            avg_cost += cost / len(train_loader)
-
-        if dataloader is not None:
-            for data, target in dataloader:
+        with tqdm(train_loader, unit="batch") as tepoch:
+            avg_cost = 0
+            for data, target in tepoch:
                 data = data.to(device)
                 target = target.to(device)
                 optimizer.zero_grad()
@@ -141,8 +135,20 @@ def Train(dataloader=None):
                 cost = criterion(hypothesis, target)
                 cost.backward()
                 optimizer.step()
-                avg_cost += cost / len(dataloader)
-        print('[Epoch: {:>4}] cost = {:>.9}'.format(epoch + 1, avg_cost))
+                avg_cost += cost / len(train_loader)
+
+            if dataloader is not None:
+                for data, target in dataloader:
+                    data = data.to(device)
+                    target = target.to(device)
+                    optimizer.zero_grad()
+                    hypothesis = model(data)
+                    cost = criterion(hypothesis, target)
+                    cost.backward()
+                    optimizer.step()
+                    avg_cost += cost / len(dataloader)
+            print('[Epoch: {:>4}] cost = {:>.9}'.format(epoch + 1, avg_cost))
+            sleep(0.1)
 
     model.eval()
 
@@ -173,12 +179,10 @@ batch_size = 100
 epochs = 100
 num_classes = 10
 
-from model.ViT import ViT
-
-# model = ConvNet(1).to(device)
-model = ViT().to(device)
-# n = 2
-# version = 4
+model = ConvNet(0).to(device)
+# model = ViT().to(device)
+# n = 3
+# version = 3
 # if version == 1:
 #     depth = n * 6 + 2
 # elif version == 2:
@@ -194,9 +198,9 @@ criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 
 # Train()
-# torch.save(model.state_dict(), 'save/Transformer_Model10.pt')
+# torch.save(model.state_dict(), 'save/ConvNet_V1_Model100.pt')
 
-model.load_state_dict(torch.load('save/Transformer_Model10.pt'))
+model.load_state_dict(torch.load('save/student_weights.pt'))
 model.eval()
 
 transform = transforms.Compose(
@@ -208,7 +212,7 @@ dataset = CustomDataSet(path='Image/Result', transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size)
 
 res = []
-f = open("Image/Result/answer_Transformer_model10.txt", 'w')
+f = open("Image/Result/answer_student_model100.txt", 'w')
 with torch.no_grad():
     for data in dataloader:
         data = data.to(device)
