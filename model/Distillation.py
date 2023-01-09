@@ -158,7 +158,7 @@ def train_val(model, params):
 
     for epoch in range(num_epochs):
         current_lr = get_lr(opt)
-        print('Epoch {}/{}, current lr = {}'.format(epoch, num_epochs-1, current_lr))
+        print('Epoch {}/{}, current lr = {}'.format(epoch+1, num_epochs, current_lr))
         model.train()
         train_loss, train_metric = loss_epoch(model, loss_func, train_dl, sanity_check, opt)
         loss_history['train'].append(train_loss)
@@ -200,25 +200,25 @@ params_train = {
 
 createFoloder('../save')
 
-teacher, loss_hist, metric_hist = train_val(teacher, params_train)
-
-num_epochs = params_train['num_epochs']
-
-plt.title('Train-Val Loss')
-plt.plot(range(1, num_epochs+1), loss_hist['train'], label='train')
-plt.plot(range(1, num_epochs+1), loss_hist['val'], label='val')
-plt.ylabel('Loss')
-plt.xlabel('Training Epochs')
-plt.legend()
-plt.show()
-
-plt.title('Train-Val Accuracy')
-plt.plot(range(1, num_epochs+1), metric_hist['train'], label='train')
-plt.plot(range(1, num_epochs+1), metric_hist['val'], label='val')
-plt.ylabel('Accuracy')
-plt.xlabel('Training Epochs')
-plt.legend()
-plt.show()
+# teacher, loss_hist, metric_hist = train_val(teacher, params_train)
+#
+# num_epochs = params_train['num_epochs']
+#
+# plt.title('Train-Val Loss')
+# plt.plot(range(1, num_epochs+1), loss_hist['train'], label='train')
+# plt.plot(range(1, num_epochs+1), loss_hist['val'], label='val')
+# plt.ylabel('Loss')
+# plt.xlabel('Training Epochs')
+# plt.legend()
+# plt.show()
+#
+# plt.title('Train-Val Accuracy')
+# plt.plot(range(1, num_epochs+1), metric_hist['train'], label='train')
+# plt.plot(range(1, num_epochs+1), metric_hist['val'], label='val')
+# plt.ylabel('Accuracy')
+# plt.xlabel('Training Epochs')
+# plt.legend()
+# plt.show()
 
 
 class Student(nn.Module):
@@ -256,15 +256,19 @@ def distillation(y, labels, teacher_scores, T, alpha):
     labels: hard label
     teacher_scores: soft label
     '''
-    return nn.KLDivLoss()(F.log_softmax(y/T, dim=1),
+
+    student_loss = F.cross_entropy(input=y, target=labels)
+    distillation_loss = nn.KLDivLoss()(F.log_softmax(y/T, dim=1),
                          # F.softmax(teacher_scores/T, dim=1) * (T*T*2.0+alpha) +
-                          F.softmax(teacher_scores / T, dim=1)) * (T * T * alpha) + \
-                          F.cross_entropy(y, labels) * (1.-alpha)
+                          F.softmax(teacher_scores / T, dim=1)) * (T * T * alpha)
+    total_loss = alpha*student_loss + (1.0 - alpha) * distillation_loss
+    return total_loss
+
 
 loss_func = nn.CrossEntropyLoss()
 
 def distill_lossbatch(output, target, teacher_output, loss_fn=distillation, opt=opt):
-    loss_b = loss_fn(output, target, teacher_output, T=20.0, alpha=0.7)
+    loss_b = loss_fn(output, target, teacher_output, T=10.0, alpha=0.1)
     metric_b = metric_batch(output, target)
 
     if opt is not None:
@@ -273,7 +277,7 @@ def distill_lossbatch(output, target, teacher_output, loss_fn=distillation, opt=
         opt.step()
     return loss_b.item(), metric_b
 
-num_epochs = 100
+num_epochs = 10
 
 loss_history = {'train': [], 'val': []}
 metric_history = {'train': [], 'val': []}
@@ -283,7 +287,7 @@ start_time = time.time()
 
 for epoch in range(num_epochs):
     current_lr = get_lr(opt)
-    print('Epoch {}/{}, current lr = {}'.format(epoch, num_epochs-1, current_lr))
+    print('Epoch {}/{}, current lr = {}'.format(epoch+1, num_epochs, current_lr))
 
     student.train()
 
@@ -300,7 +304,7 @@ for epoch in range(num_epochs):
             loss_b, metric_b = distill_lossbatch(output, yb, teacher_output, loss_fn=distillation, opt=opt)
 
             running_loss += loss_b
-            running_metric = metric_b
+            running_metric += metric_b
         sleep(0.1)
 
     train_loss = running_loss / len_data

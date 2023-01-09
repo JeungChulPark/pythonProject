@@ -223,7 +223,7 @@ def train_val(model, params):
 
     for epoch in range(num_epochs):
         current_lr = get_lr(opt)
-        print('Epoch {}/{}, current lr = {}'.format(epoch, num_epochs-1, current_lr))
+        print('Epoch {}/{}, current lr = {}'.format(epoch+1, num_epochs, current_lr))
         model.train()
         train_loss, train_metric = loss_epoch(model, loss_func, train_dl, sanity_check, opt)
         loss_history['train'].append(train_loss)
@@ -343,13 +343,15 @@ def distillation(y, labels, teacher_scores, T, alpha):
     labels: hard label
     teacher_scores: soft label
     '''
-    return nn.KLDivLoss()(F.log_softmax(y / T, dim=1),
-                          # F.softmax(teacher_scores/T, dim=1) * (T*T*2.0+alpha) +
-                            F.softmax(teacher_scores / T, dim=1)) * (T * T * alpha) + \
-                            F.cross_entropy(y, labels) * (1. - alpha)
+    student_loss = F.cross_entropy(input=y, target=labels)
+    distillation_loss = nn.KLDivLoss()(F.log_softmax(y/T, dim=1),
+                         # F.softmax(teacher_scores/T, dim=1) * (T*T*2.0+alpha) +
+                          F.softmax(teacher_scores / T, dim=1)) * (T * T * alpha)
+    total_loss = alpha*student_loss + (1.0 - alpha) * distillation_loss
+    return total_loss
 
 def distill_lossbatch(output, target, teacher_output, loss_fn=distillation, opt=opt):
-    loss_b = loss_fn(output, target, teacher_output, T=20.0, alpha=0.7)
+    loss_b = loss_fn(output, target, teacher_output, T=10.0, alpha=0.1)
     metric_b = metric_batch(output, target)
 
     if opt is not None:
@@ -387,7 +389,7 @@ def train_distill_val(teacher, student, params):
 
     for epoch in range(num_epochs):
         current_lr = get_lr(opt)
-        print('Epoch {}/{}, current lr = {}'.format(epoch, num_epochs-1, current_lr))
+        print('Epoch {}/{}, current lr = {}'.format(epoch+1, num_epochs, current_lr))
         student.train()
 
         running_loss = 0.0
@@ -404,7 +406,7 @@ def train_distill_val(teacher, student, params):
                 loss_b, metric_b = distill_lossbatch(output, yb, teacher_output, loss_fn=distillation, opt=opt)
 
                 running_loss += loss_b
-                running_metric = metric_b
+                running_metric += metric_b
             sleep(0.1)
 
         train_loss = running_loss / len_data
@@ -422,7 +424,6 @@ def train_distill_val(teacher, student, params):
 
         if val_loss < best_loss:
             best_loss = val_loss
-            best_model_wts = copy.deepcopy(student.state_dict())
             torch.save(student.state_dict(), path2weights)
             print('Copied best model weights')
 
