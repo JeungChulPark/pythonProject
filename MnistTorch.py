@@ -1,13 +1,18 @@
+import copy
 import os
 import cv2
+import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
 import torchvision
 import torchvision.transforms as transforms
 import numpy as np
+import matplotlib.pyplot as plt
 from model.ConvNet import ConvNet
 from torch.utils.data import Dataset, DataLoader
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from model.ResNetTorch import ResNetTorch
 from model.ResnetLayer import ResnetLayer, ResnetLayerIter
 from model.ResnetLayerV2 import ResnetLayerV2, ResnetLayerV2Iter
@@ -15,7 +20,6 @@ from model.ResnetBlockLayer import ResnetBlockLayer
 from model.ViT import ViT
 from tqdm import tqdm
 from time import sleep
-
 
 class CustomDataSet(Dataset):
     def __init__(self, target=None, path='', transform=None):
@@ -107,7 +111,6 @@ def DataTestLoad():
     test_loader = DataLoader(test_set, batch_size=batch_size)
     return test_loader
 
-
 def lr_schedule(self, epoch):
     lr = 1e-3
     if epoch > 180:
@@ -121,21 +124,61 @@ def lr_schedule(self, epoch):
     print('Learning rate : ', lr)
     return lr
 
+def draw_train_val(num_epochs, loss_hist, metric_hist):
+    plt.title('Train-Val Loss')
+    plt.plot(range(1, num_epochs + 1), loss_hist['train'], label='train')
+    plt.plot(range(1, num_epochs + 1), loss_hist['val'], label='val')
+    plt.ylabel('Loss')
+    plt.xlabel('Training Epochs')
+    plt.legend()
+    plt.show()
+
+    # plot train-val accuracy
+    plt.title('Train-Val Accuracy')
+    plt.plot(range(1, num_epochs + 1), metric_hist['train'], label='train')
+    plt.plot(range(1, num_epochs + 1), metric_hist['val'], label='val')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Training Epochs')
+    plt.legend()
+    plt.show()
+
+def get_lr(opt):
+    for param_group in opt.param_groups:
+        return param_group['lr']
 def Train(dataloader=None):
     train_loader = DataTrainLoad()
+    test_loader = DataTestLoad()
+
+    loss_history = {'train': [], 'val': []}
+    metric_history = {'train': [], 'val': []}
+
+    best_loss = float('inf')
+    best_model_wts = copy.deepcopy(model.state_dict())
+    start_time = time.time()
 
     for epoch in range(epochs):
         with tqdm(train_loader, unit="batch") as tepoch:
-            avg_cost = 0
+            avg_train_loss = 0
+            avg_train_corrects = 0
+            current_lr = get_lr(optimizer)
+            print('[Epoch: {}/{}, current lr = {}'.format(epoch + 1, epochs, current_lr))
             for data, target in tepoch:
                 data = data.to(device)
                 target = target.to(device)
                 optimizer.zero_grad()
                 hypothesis = model(data)
-                cost = criterion(hypothesis, target)
-                cost.backward()
+                train_loss = criterion(hypothesis, target)
+                pred = hypothesis.argmax(1, keepdim=True)
+                corrects = pred.eq(target.view_as(pred)).sum().item()
+                train_loss.backward()
                 optimizer.step()
-                avg_cost += cost / len(train_loader)
+                avg_train_loss += train_loss.item()
+                avg_train_corrects += corrects
+
+            avg_train_loss /= len(train_loader)
+            avg_corrects = 100 * corrects / len(train_loader)
+            loss_history['train'].append(avg_train_loss)
+            metric_history['train'].append(avg_corrects)
 
             if dataloader is not None:
                 for data, target in dataloader:
@@ -143,28 +186,51 @@ def Train(dataloader=None):
                     target = target.to(device)
                     optimizer.zero_grad()
                     hypothesis = model(data)
-                    cost = criterion(hypothesis, target)
-                    cost.backward()
+                    train_loss = criterion(hypothesis, target)
+                    train_loss.backward()
                     optimizer.step()
-                    avg_cost += cost / len(dataloader)
-            print('[Epoch: {:>4}] cost = {:>.9}'.format(epoch + 1, avg_cost))
+                    avg_train_loss += train_loss.item()
             sleep(0.1)
 
-    model.eval()
+        model.eval()
+        with torch.no_grad():
+            correct = 0
+            total = 0
 
-    test_loader = DataTestLoad()
-    with torch.no_grad():
-        correct = 0
-        total = 0
+            with tqdm(test_loader, unit="batch") as tepoch:
+                avg_val_loss = 0
+                for data, target in tepoch:
+                    data = data.to(device)
+                    target = target.to(device)
+                    out = model(data)
+                    cost = criterion(out, target)
+                    preds = torch.max(out.data, 1)[1]
+                    total += len(target)
+                    correct += (preds==target).sum().item()
+                    avg_val_loss += cost.item()
 
-        for data, target in test_loader:
-            data = data.to(device)
-            target = target.to(device)
-            out = model(data)
-            preds = torch.max(out.data, 1)[1]
-            total += len(target)
-            correct += (preds==target).sum().item()
-        print("Test Accuracy: ", 100.*correct/total, '%')
+                avg_val_loss /= len(test_loader)
+                avg_val_corrects = 100 * correct / total
+                loss_history['val'].append(avg_val_loss)
+                metric_history['val'].append(avg_val_corrects)
+
+                if cost < best_loss:
+                    best_loss = cost
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                    torch.save(model.state_dict(), './save/ResNet_V3_Model100.pt')
+                    print('Copied best model weights')
+
+                lr_scheduler.step(cost)
+                if current_lr != get_lr(optimizer):
+                    print('Loading data model weights!')
+                    model.load_state_dict(best_model_wts)
+
+                print("train loss : %.6f, val loss : %.6f, accuracy : %.2f, time : %.4f min" %
+                      (avg_train_loss, avg_val_loss, avg_val_corrects, (time.time() - start_time)/60))
+                sleep(0.1)
+
+    model.load_state_dict(best_model_wts)
+    return loss_history, metric_history
 
 
 
@@ -176,54 +242,56 @@ print(device + " is available")
 
 learning_rate = 0.001
 batch_size = 100
-epochs = 100
+epochs = 10
 num_classes = 10
 
-model = ConvNet(0).to(device)
+# model = ConvNet(0).to(device)
 # model = ViT().to(device)
-# n = 3
-# version = 3
-# if version == 1:
-#     depth = n * 6 + 2
-# elif version == 2:
-#     depth = n * 9 + 2
-# elif version == 3:
-#     depth = n * 6 + 2
-# elif version == 4:
-#     depth = n * 9 + 2
-#
-# model = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
+n = 3
+version = 3
+if version == 1:
+    depth = n * 6 + 2
+elif version == 2:
+    depth = n * 9 + 2
+elif version == 3:
+    depth = n * 6 + 2
+elif version == 4:
+    depth = n * 9 + 2
+
+model = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
 # model = ResNetTorch(version=version, layer=ResnetLayer, layeriter=ResnetLayerIter, depth=depth, num_classes=num_classes).to(device)
 criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
+lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
 
-# Train()
+loss_hist, metric_hist = Train()
+draw_train_val(epochs, loss_hist, metric_hist)
 # torch.save(model.state_dict(), 'save/ConvNet_V1_Model100.pt')
 
-model.load_state_dict(torch.load('save/student_weights.pt'))
-model.eval()
-
-transform = transforms.Compose(
-    [
-        transforms.ToTensor()
-    ]
-)
-dataset = CustomDataSet(path='Image/Result', transform=transform)
-dataloader = DataLoader(dataset, batch_size=batch_size)
-
-res = []
-f = open("Image/Result/answer_student_model100.txt", 'w')
-with torch.no_grad():
-    for data in dataloader:
-        data = data.to(device)
-        out = model(data)
-        preds = torch.max(out.data, 1)[1]
-        res.append(preds.to('cpu'))
-        # res = np.append(res, preds.to('cpu'))
-        # print(preds)
-        for i in preds:
-            f.write("%d\n" % i)
-f.close()
+# model.load_state_dict(torch.load('save/student_weights.pt'))
+# model.eval()
+#
+# transform = transforms.Compose(
+#     [
+#         transforms.ToTensor()
+#     ]
+# )
+# dataset = CustomDataSet(path='Image/Result', transform=transform)
+# dataloader = DataLoader(dataset, batch_size=batch_size)
+#
+# res = []
+# f = open("Image/Result/answer_student_model100.txt", 'w')
+# with torch.no_grad():
+#     for data in dataloader:
+#         data = data.to(device)
+#         out = model(data)
+#         preds = torch.max(out.data, 1)[1]
+#         res.append(preds.to('cpu'))
+#         # res = np.append(res, preds.to('cpu'))
+#         # print(preds)
+#         for i in preds:
+#             f.write("%d\n" % i)
+# f.close()
 
 
 # for i in range(len(res)):

@@ -9,6 +9,7 @@ import torchvision.models as models
 import os
 import copy
 import time
+import numpy as np
 from torchvision.transforms.functional import to_pil_image
 import matplotlib.pyplot as plt
 # %matplotlib inline
@@ -317,7 +318,7 @@ train_dl = DataTrainLoad()
 val_dl = DataTestLoad()
 
 params_train = {
-    'num_epochs' : 10,
+    'num_epochs' : 100,
     'optimizer':opt,
     'loss_func': loss_func,
     'train_dl': train_dl,
@@ -344,9 +345,10 @@ def distillation(y, labels, teacher_scores, T, alpha):
     teacher_scores: soft label
     '''
     student_loss = F.cross_entropy(input=y, target=labels)
-    distillation_loss = nn.KLDivLoss()(F.log_softmax(y/T, dim=1),
-                         # F.softmax(teacher_scores/T, dim=1) * (T*T*2.0+alpha) +
-                          F.softmax(teacher_scores / T, dim=1)) * (T * T * alpha)
+    distillation_loss = nn.KLDivLoss(reduction='batchmean')(
+                        F.log_softmax(y/T, dim=1),
+                        # F.softmax(teacher_scores/T, dim=1) * (T*T*2.0+alpha) +
+                        F.softmax(teacher_scores / T, dim=1)) * (T * T * alpha)
     total_loss = alpha*student_loss + (1.0 - alpha) * distillation_loss
     return total_loss
 
@@ -385,6 +387,7 @@ def train_distill_val(teacher, student, params):
     metric_history = {'train': [], 'val': []}
 
     best_loss = float('inf')
+    best_model_wts = copy.deepcopy(student.state_dict())
     start_time = time.time()
 
     for epoch in range(num_epochs):
@@ -424,10 +427,15 @@ def train_distill_val(teacher, student, params):
 
         if val_loss < best_loss:
             best_loss = val_loss
+            best_model_wts = copy.deepcopy(student.state_dict())
             torch.save(student.state_dict(), path2weights)
             print('Copied best model weights')
 
         lr_scheduler.step(val_loss)
+
+        if current_lr != get_lr(opt):
+            print('Loading data model weights!')
+            student.load_state_dict(best_model_wts)
 
         print('train loss : %.6f, val loss : %.6f, accuracy : %.2f, time : %.4f min' %
               (train_loss, val_loss, 100*val_metric, (time.time()-start_time)/60))
