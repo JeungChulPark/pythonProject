@@ -176,9 +176,9 @@ def Train(dataloader=None):
                 avg_train_corrects += corrects
 
             avg_train_loss /= len(train_loader)
-            avg_corrects = 100 * corrects / len(train_loader)
+            avg_train_corrects /=  len(train_loader)
             loss_history['train'].append(avg_train_loss)
-            metric_history['train'].append(avg_corrects)
+            metric_history['train'].append(avg_train_corrects)
 
             if dataloader is not None:
                 for data, target in dataloader:
@@ -203,30 +203,31 @@ def Train(dataloader=None):
                     data = data.to(device)
                     target = target.to(device)
                     out = model(data)
-                    cost = criterion(out, target)
+                    val_loss = criterion(out, target)
                     preds = torch.max(out.data, 1)[1]
                     total += len(target)
                     correct += (preds==target).sum().item()
-                    avg_val_loss += cost.item()
+                    avg_val_loss += val_loss.item()
 
                 avg_val_loss /= len(test_loader)
                 avg_val_corrects = 100 * correct / total
                 loss_history['val'].append(avg_val_loss)
                 metric_history['val'].append(avg_val_corrects)
 
-                if cost < best_loss:
-                    best_loss = cost
+                if val_loss < best_loss:
+                    best_loss = val_loss
                     best_model_wts = copy.deepcopy(model.state_dict())
                     torch.save(model.state_dict(), './save/ResNet_V3_Model100.pt')
                     print('Copied best model weights')
 
-                lr_scheduler.step(cost)
+                lr_scheduler.step(val_loss)
                 if current_lr != get_lr(optimizer):
                     print('Loading data model weights!')
                     model.load_state_dict(best_model_wts)
 
                 print("train loss : %.6f, val loss : %.6f, accuracy : %.2f, time : %.4f min" %
                       (avg_train_loss, avg_val_loss, avg_val_corrects, (time.time() - start_time)/60))
+                print('-' * 10)
                 sleep(0.1)
 
     model.load_state_dict(best_model_wts)
@@ -242,13 +243,13 @@ print(device + " is available")
 
 learning_rate = 0.001
 batch_size = 100
-epochs = 10
+epochs = 100
 num_classes = 10
 
 # model = ConvNet(0).to(device)
 # model = ViT().to(device)
-n = 3
-version = 3
+n = 2
+version = 4
 if version == 1:
     depth = n * 6 + 2
 elif version == 2:
