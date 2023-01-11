@@ -20,7 +20,7 @@ from model.ResnetBlockLayer import ResnetBlockLayer
 from model.ViT import ViT
 from tqdm import tqdm
 from time import sleep
-
+from torch.utils.tensorboard import SummaryWriter
 class CustomDataSet(Dataset):
     def __init__(self, target=None, path='', transform=None):
         self.path = path
@@ -145,7 +145,7 @@ def draw_train_val(num_epochs, loss_hist, metric_hist):
 def get_lr(opt):
     for param_group in opt.param_groups:
         return param_group['lr']
-def Train(dataloader=None):
+def Train(dataloader=None, path2weights=''):
     train_loader = DataTrainLoad()
     test_loader = DataTestLoad()
 
@@ -177,6 +177,8 @@ def Train(dataloader=None):
 
             avg_train_loss /= len(train_loader)
             avg_train_corrects /=  len(train_loader)
+            writer.add_scalar("Loss/train", avg_train_loss, epoch)
+            writer.add_scalar("Accuracy/train", avg_train_corrects, epoch)
             loss_history['train'].append(avg_train_loss)
             metric_history['train'].append(avg_train_corrects)
 
@@ -204,6 +206,7 @@ def Train(dataloader=None):
                     target = target.to(device)
                     out = model(data)
                     val_loss = criterion(out, target)
+
                     preds = torch.max(out.data, 1)[1]
                     total += len(target)
                     correct += (preds==target).sum().item()
@@ -211,13 +214,15 @@ def Train(dataloader=None):
 
                 avg_val_loss /= len(test_loader)
                 avg_val_corrects = 100 * correct / total
+                writer.add_scalar("Loss/val", avg_val_loss, epoch)
+                writer.add_scalar("Accuracy/val", avg_val_corrects, epoch)
                 loss_history['val'].append(avg_val_loss)
                 metric_history['val'].append(avg_val_corrects)
 
                 if val_loss < best_loss:
                     best_loss = val_loss
                     best_model_wts = copy.deepcopy(model.state_dict())
-                    torch.save(model.state_dict(), './save/ResNet_V3_Model100.pt')
+                    torch.save(model.state_dict(), path2weights)
                     print('Copied best model weights')
 
                 lr_scheduler.step(val_loss)
@@ -233,7 +238,7 @@ def Train(dataloader=None):
     model.load_state_dict(best_model_wts)
     return loss_history, metric_history
 
-
+writer = SummaryWriter()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.manual_seed(777)
@@ -246,30 +251,30 @@ batch_size = 100
 epochs = 100
 num_classes = 10
 
-# model = ConvNet(0).to(device)
-# model = ViT().to(device)
-n = 2
-version = 4
-if version == 1:
-    depth = n * 6 + 2
-elif version == 2:
-    depth = n * 9 + 2
-elif version == 3:
-    depth = n * 6 + 2
-elif version == 4:
-    depth = n * 9 + 2
-
-model = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
+# model = ConvNet(1).to(device)
+model = ViT().to(device)
+# n = 3
+# version = 3
+# if version == 1:
+#     depth = n * 6 + 2
+# elif version == 2:
+#     depth = n * 9 + 2
+# elif version == 3:
+#     depth = n * 6 + 2
+# elif version == 4:
+#     depth = n * 9 + 2
+#
+# model = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
 # model = ResNetTorch(version=version, layer=ResnetLayer, layeriter=ResnetLayerIter, depth=depth, num_classes=num_classes).to(device)
 criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
 
-loss_hist, metric_hist = Train()
+loss_hist, metric_hist = Train(dataloader=None, path2weights='./save/ConvNet_V1_Model100.pt')
+writer.flush()
 draw_train_val(epochs, loss_hist, metric_hist)
-# torch.save(model.state_dict(), 'save/ConvNet_V1_Model100.pt')
 
-# model.load_state_dict(torch.load('save/student_weights.pt'))
+# model.load_state_dict(torch.load('save/ConvNet_V1_Model100.pt'))
 # model.eval()
 #
 # transform = transforms.Compose(
@@ -281,7 +286,7 @@ draw_train_val(epochs, loss_hist, metric_hist)
 # dataloader = DataLoader(dataset, batch_size=batch_size)
 #
 # res = []
-# f = open("Image/Result/answer_student_model100.txt", 'w')
+# f = open("Image/Result/answer_ConvNet_V1_Model100.txt", 'w')
 # with torch.no_grad():
 #     for data in dataloader:
 #         data = data.to(device)
@@ -307,3 +312,4 @@ draw_train_val(epochs, loss_hist, metric_hist)
 #
 # Train(dataloader)
 # torch.save(model.state_dict(), 'save/ConvNet_V2_Model100_tl.pt')
+writer.close()

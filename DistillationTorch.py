@@ -18,9 +18,10 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from model.ConvNet import ConvNet
 from model.ResNetTorch import ResNetTorch
 from model.ResnetBlockLayer import ResnetBlockLayer
+from model.ViT import ViT
 from tqdm import tqdm
 from time import sleep
-
+from torch.utils.tensorboard import SummaryWriter
 
 class CustomDataSet(Dataset):
     def __init__(self, target=None, path='', transform=None):
@@ -227,12 +228,17 @@ def train_val(model, params):
         print('Epoch {}/{}, current lr = {}'.format(epoch+1, num_epochs, current_lr))
         model.train()
         train_loss, train_metric = loss_epoch(model, loss_func, train_dl, sanity_check, opt)
+        writer.add_scalar("Teacher/Loss/train", train_loss, epoch)
+        writer.add_scalar("Teacher/Accuracy/train", train_metric, epoch)
         loss_history['train'].append(train_loss)
         metric_history['train'].append(train_metric)
 
         model.eval()
         with torch.no_grad():
             val_loss, val_metric = loss_epoch(model, loss_func, val_dl, sanity_check)
+
+        writer.add_scalar("Teacher/Loss/val", val_loss, epoch)
+        writer.add_scalar("Teacher/Accuracy/val", val_metric, epoch)
         loss_history['val'].append(val_loss)
         metric_history['val'].append(val_metric)
 
@@ -249,7 +255,7 @@ def train_val(model, params):
         print('train loss : %.6f, val loss : %.6f, accuracy : %.2f, time : %.4f min' %
               (train_loss, val_loss, 100*val_metric, (time.time() - start_time)/60))
         print('-'*10)
-
+    writer.flush()
     model.load_state_dict(best_model_wts)
     return model, loss_history, metric_history
 
@@ -272,6 +278,7 @@ def draw_train_val(num_epochs, loss_hist, metric_hist):
     plt.legend()
     plt.show()
 
+writer = SummaryWriter()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.manual_seed(777)
@@ -284,18 +291,19 @@ batch_size = 100
 epochs = 10
 num_classes = 10
 
-n = 3
-version = 3
-if version == 1:
-    depth = n * 6 + 2
-elif version == 2:
-    depth = n * 9 + 2
-elif version == 3:
-    depth = n * 6 + 2
-elif version == 4:
-    depth = n * 9 + 2
-
-teacher = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
+# n = 3
+# version = 3
+# if version == 1:
+#     depth = n * 6 + 2
+# elif version == 2:
+#     depth = n * 9 + 2
+# elif version == 3:
+#     depth = n * 6 + 2
+# elif version == 4:
+#     depth = n * 9 + 2
+#
+# teacher = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
+teacher = ViT().to(device)
 loss_func = nn.CrossEntropyLoss().to(device)
 opt = optim.Adam(teacher.parameters(), lr = learning_rate)
 
@@ -325,15 +333,15 @@ params_train = {
     'val_dl': val_dl,
     'sanity_check': False,
     'lr_scheduler': lr_scheduler,
-    'path2weights':'./save/teacher_weights.pt'
+    'path2weights':'./save/Transformer_Model100.pt'
 }
 
-# teacher, loss_hist, metric_hist = train_val(teacher, params_train)
-# num_epochs = params_train['num_epochs']
-# draw_train_val(num_epochs, loss_hist, metric_hist)
+teacher, loss_hist, metric_hist = train_val(teacher, params_train)
+num_epochs = params_train['num_epochs']
+draw_train_val(num_epochs, loss_hist, metric_hist)
 
-teacher.load_state_dict(torch.load('./save/ResNet_V3_Model100.pt'))
-student = ConvNet(0).to(device)
+teacher.load_state_dict(torch.load('./save/Transformer_Model100.pt'))
+student = ConvNet(1).to(device)
 
 opt = optim.Adam(student.parameters(), lr = learning_rate)
 
@@ -353,7 +361,7 @@ def distillation(y, labels, teacher_scores, T, alpha):
     return total_loss
 
 def distill_lossbatch(output, target, teacher_output, loss_fn=distillation, opt=opt):
-    loss_b = loss_fn(output, target, teacher_output, T=10.0, alpha=0.1)
+    loss_b = loss_fn(output, target, teacher_output, T=20.0, alpha=0.0001)
     metric_b = metric_batch(output, target)
 
     if opt is not None:
@@ -370,7 +378,7 @@ params_distill_train = {
     'val_dl': val_dl,
     'sanity_check': False,
     'lr_scheduler': lr_scheduler,
-    'path2weights':'./save/student_weights.pt'
+    'path2weights':'./save/Transformer_ConvNet_V1_Distillation_Model100.pt'
 }
 
 def train_distill_val(teacher, student, params):
@@ -414,7 +422,8 @@ def train_distill_val(teacher, student, params):
 
         train_loss = running_loss / len_data
         train_metric = running_metric / len_data
-
+        writer.add_scalar("Student/Loss/train", train_loss, epoch)
+        writer.add_scalar("Student/Accuracy/train", train_metric, epoch)
         loss_history['train'].append(train_loss)
         metric_history['train'].append(train_metric)
 
@@ -422,6 +431,8 @@ def train_distill_val(teacher, student, params):
 
         with torch.no_grad():
             val_loss, val_metric = loss_epoch(student, loss_func, val_dl)
+        writer.add_scalar("Student/Loss/val", val_loss, epoch)
+        writer.add_scalar("Student/Accuracy/val", val_metric, epoch)
         loss_history['val'].append(val_loss)
         metric_history['val'].append(val_metric)
 
@@ -440,9 +451,11 @@ def train_distill_val(teacher, student, params):
         print('train loss : %.6f, val loss : %.6f, accuracy : %.2f, time : %.4f min' %
               (train_loss, val_loss, 100*val_metric, (time.time()-start_time)/60))
         print('-'*10)
-
+    writer.flush()
     return teacher, student, loss_history, metric_history
 
 teacher, student, loss_hist, metric_hist = train_distill_val(teacher, student, params_distill_train)
 num_epochs = params_distill_train['num_epochs']
 draw_train_val(num_epochs, loss_hist, metric_hist)
+
+writer.close()
