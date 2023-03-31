@@ -251,8 +251,8 @@ batch_size = 100
 epochs = 100
 num_classes = 10
 
-# model = ConvNet(1).to(device)
-model = ViT().to(device)
+model = ConvNet(1).to(device)
+# model = ViT().to(device)
 # n = 3
 # version = 3
 # if version == 1:
@@ -270,34 +270,34 @@ criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.Adam(model.parameters(), lr = learning_rate)
 lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
 
-loss_hist, metric_hist = Train(dataloader=None, path2weights='./save/ConvNet_V1_Model100.pt')
-writer.flush()
-draw_train_val(epochs, loss_hist, metric_hist)
+# loss_hist, metric_hist = Train(dataloader=None, path2weights='./save/ConvNet_V1_Model100.pt')
+# writer.flush()
+# draw_train_val(epochs, loss_hist, metric_hist)
 
-# model.load_state_dict(torch.load('save/ConvNet_V1_Model100.pt'))
-# model.eval()
-#
-# transform = transforms.Compose(
-#     [
-#         transforms.ToTensor()
-#     ]
-# )
-# dataset = CustomDataSet(path='Image/Result', transform=transform)
-# dataloader = DataLoader(dataset, batch_size=batch_size)
-#
-# res = []
-# f = open("Image/Result/answer_ConvNet_V1_Model100.txt", 'w')
-# with torch.no_grad():
-#     for data in dataloader:
-#         data = data.to(device)
-#         out = model(data)
-#         preds = torch.max(out.data, 1)[1]
-#         res.append(preds.to('cpu'))
-#         # res = np.append(res, preds.to('cpu'))
-#         # print(preds)
-#         for i in preds:
-#             f.write("%d\n" % i)
-# f.close()
+model.load_state_dict(torch.load('save/Transformer_ConvNet_V1_Distillation_Model100.pt'))
+model.eval()
+
+transform = transforms.Compose(
+    [
+        transforms.ToTensor()
+    ]
+)
+dataset = CustomDataSet(path='Image/Result', transform=transform)
+dataloader = DataLoader(dataset, batch_size=batch_size)
+
+res = []
+f = open("Image/Result/answer_Transformer_ConvNet_V1_Distillation_Model100.txt", 'w')
+with torch.no_grad():
+    for data in dataloader:
+        data = data.to(device)
+        out = model(data)
+        preds = torch.max(out.data, 1)[1]
+        res.append(preds.to('cpu'))
+        # res = np.append(res, preds.to('cpu'))
+        # print(preds)
+        for i in preds:
+            f.write("%d\n" % i)
+f.close()
 
 
 # for i in range(len(res)):

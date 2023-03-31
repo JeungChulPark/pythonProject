@@ -371,7 +371,7 @@ def distill_lossbatch(output, target, teacher_output, loss_fn=distillation, opt=
     return loss_b.item(), metric_b
 
 params_distill_train = {
-    'num_epochs' : 100,
+    'num_epochs' : 200,
     'optimizer':opt,
     'loss_func': loss_func,
     'train_dl': train_dl,
