@@ -10,6 +10,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import math
 from torchvision.datasets import MNIST
+from torch.utils.tensorboard import SummaryWriter
 
 class GRUCell(nn.Module):
     def __init__(self, input_size, hidden_size, bias=True):
@@ -69,6 +70,11 @@ class GRUModel(nn.Module):
         out = self.fc(out)
         return out
 
+def get_lr(opt):
+    for param_group in opt.param_groups:
+        return param_group['lr']
+
+writer = SummaryWriter()
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 cuda = True if torch.cuda.is_available() else False
@@ -120,6 +126,8 @@ seq_dim = 28
 loss_list = []
 iter = 0
 for epoch in range(num_epochs):
+    current_lr = get_lr(optimizer)
+    print('[Epoch: {}/{}, current lr = {}]'.format(epoch+1, num_epochs, current_lr))
     for i, (images, labels) in enumerate(train_loader):
         if torch.cuda.is_available():
             images = Variable(images.view(-1, seq_dim, input_dim).cuda())
@@ -131,7 +139,7 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
         outputs = model(images)
         loss = criterion(outputs, labels)
-
+        writer.add_scalar("loss/train", loss, epoch)
         if torch.cuda.is_available():
             loss.cuda()
 
@@ -163,15 +171,15 @@ for epoch in range(num_epochs):
                 print(f'Iteration : {iter}. Loss : {loss.item()}. Accuracy : {accuracy}')
 
 def evaluate(model, val_iter):
-    corrects, total, total_loss = 0,0,0
+    corrects, total, total_loss = 0, 0, 0
     model.eval()
     for images, labels in val_iter:
         if torch.cuda.is_available():
             images = Variable(images.view(-1, seq_dim, input_dim).cuda())
         else:
-            images = Variable(images.view(-1, seq_dim, input_dim)).to(device)
+            images = Variable(images.view(-1, seq_dim, input_dim))
 
-        logit = model(images).to(device)
+        logit = model(images).cuda()
         loss = F.cross_entropy(logit, labels, reduction='sum')
         _, predicted = torch.max(logit.data, 1)
         total += labels.size(0)
@@ -179,9 +187,10 @@ def evaluate(model, val_iter):
         corrects += (predicted == labels).sum()
 
     avg_loss = total_loss / len(val_iter.dataset)
-    avg_accuracy = corrects /total
+    avg_accuracy = corrects / total
     return avg_loss, avg_accuracy
 
 test_loss, test_acc = evaluate(model, test_loader)
 print(f'Test Loss : {test_loss:5.2f} | Test Accuracy : {test_acc:5.2f}')
 
+writer.close()
