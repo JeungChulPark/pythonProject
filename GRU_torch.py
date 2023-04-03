@@ -177,7 +177,7 @@ def train(model, train_loader):
                 optimizer.zero_grad()
                 outputs = model(images)
                 loss = criterion(outputs, labels)
-                writer.add_scalar("loss/train", loss, epoch)
+                writer.add_scalar("GRU/loss/train", loss, epoch)
                 if torch.cuda.is_available():
                     loss.cuda()
                 loss.backward()
@@ -206,7 +206,7 @@ def train(model, train_loader):
                     target = labels.to(device)
                     outputs = model(images)
                     val_loss = criterion(outputs, target)
-
+                    writer.add_scalar("GRU/loss/val", val_loss, epoch)
                     _, predicted = torch.max(outputs.data, 1)
                     total += labels.size(0)
 
@@ -214,6 +214,7 @@ def train(model, train_loader):
                         correct += (predicted.cpu() == labels.cpu()).sum()
                     else:
                         correct += (predicted == labels).sum()
+                    writer.add_scalar("GRU/accuracy/val", 100*correct, epoch)
                     avg_val_loss += val_loss.item()
 
                 avg_val_loss /= len(valid_loader)
