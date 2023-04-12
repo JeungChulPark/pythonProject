@@ -94,8 +94,11 @@ class GRU(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        h_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size))
-        output, (hn) = self.gru(x, (h_0))
+        if torch.cuda.is_available():
+            h_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size).cuda())
+        else:
+            h_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size))
+        output, hn = self.gru(x, h_0)
         hn = hn.view(-1, self.hidden_size)
         out = self.relu(hn)
         out = self.fc_1(out)
@@ -136,7 +139,7 @@ valid_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=T
 test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
 
 batch_size = 100
-n_iters = 6000
+n_iters = 60000
 num_epochs = n_iters / (len(train_dataset)/batch_size)
 num_epochs = int(num_epochs)
 
@@ -146,11 +149,13 @@ layer_dim = 1
 output_dim = 10
 
 model = GRUModel(input_dim, hidden_dim, layer_dim, output_dim)
+# num_classes = 10
+# model = GRU(num_classes=num_classes, input_size=input_dim, hidden_size=hidden_dim, num_layers=layer_dim, seq_length=1)
 
 if torch.cuda.is_available():
     model.cuda()
 
-criterion = nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss().to(device)
 learning_rate = 0.1
 
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
@@ -162,6 +167,7 @@ def train(model, train_loader):
     start_time = time.time()
 
     for epoch in range(num_epochs):
+        model.train()
         with tqdm(train_loader, unit="batch") as tepoch:
             avg_train_loss = 0
             current_lr = get_lr(optimizer)
@@ -177,7 +183,7 @@ def train(model, train_loader):
                 optimizer.zero_grad()
                 outputs = model(images)
                 loss = criterion(outputs, labels)
-                writer.add_scalar("GRU/loss/train", loss, epoch)
+
                 if torch.cuda.is_available():
                     loss.cuda()
                 loss.backward()
@@ -187,6 +193,7 @@ def train(model, train_loader):
                 loss_list.append(loss.item())
 
             avg_train_loss /= len(train_loader)
+            writer.add_scalar("GRU/train/loss", avg_train_loss, epoch)
             # iter += 1
             # if iter % 500 == 0:
             sleep(0.1)
@@ -204,9 +211,9 @@ def train(model, train_loader):
                         images = Variable(images.view(-1, seq_dim, input_dim))
 
                     target = labels.to(device)
-                    outputs = model(images)
+                    outputs = model(images).to(device)
                     val_loss = criterion(outputs, target)
-                    writer.add_scalar("GRU/loss/val", val_loss, epoch)
+
                     _, predicted = torch.max(outputs.data, 1)
                     total += labels.size(0)
 
@@ -214,11 +221,13 @@ def train(model, train_loader):
                         correct += (predicted.cpu() == labels.cpu()).sum()
                     else:
                         correct += (predicted == labels).sum()
-                    writer.add_scalar("GRU/accuracy/val", 100*correct, epoch)
                     avg_val_loss += val_loss.item()
 
                 avg_val_loss /= len(valid_loader)
                 accuracy = 100 * correct / total
+                writer.add_scalar("GRU/val/loss", avg_val_loss, epoch)
+                writer.add_scalar("GRU/val/accuracy", accuracy, epoch)
+
                 print("train loss : %.6f, val loss : %.6f, Accuracy : %.2f, time : %.4f min" %
                       (avg_train_loss, avg_val_loss, accuracy, (time.time() - start_time)/60))
                 print('-' * 10)
@@ -230,26 +239,33 @@ def evaluate(model, val_iter):
     seq_dim = 28
     corrects, total, total_loss = 0, 0, 0
     model.eval()
-    for images, labels in val_iter:
-        if torch.cuda.is_available():
-            images = Variable(images.view(-1, seq_dim, input_dim).cuda())
-        else:
-            images = Variable(images.view(-1, seq_dim, input_dim))
+    with tqdm(val_iter, unit="batch") as tepoch:
+        for images, labels in tepoch:
+            if torch.cuda.is_available():
+                images = Variable(images.view(-1, seq_dim, input_dim).cuda())
+            else:
+                images = Variable(images.view(-1, seq_dim, input_dim))
 
-        logit = model(images).to(device)
-        labels = labels.to(device)
-        loss = F.cross_entropy(logit, labels, reduction='sum')
-        _, predicted = torch.max(logit.data, 1)
-        total += labels.size(0)
-        total_loss += loss.item()
-        corrects += (predicted == labels).sum()
+            logit = model(images).to(device)
+            labels = labels.to(device)
+            loss = F.cross_entropy(logit, labels, reduction='sum')
+            _, predicted = torch.max(logit.data, 1)
+            total += labels.size(0)
+            total_loss += loss.item()
+            corrects += (predicted == labels).sum()
 
-    avg_loss = total_loss / len(val_iter.dataset)
-    avg_accuracy = corrects / total
+        avg_loss = total_loss / len(val_iter.dataset)
+        avg_accuracy = corrects / total
     return avg_loss, avg_accuracy
 
 train_loss, train_acc = train(model, train_loader)
+torch.save(model.state_dict(), 'save/GRU_Model100.pt')
 test_loss, test_acc = evaluate(model, test_loader)
 print(f'Test Loss : {test_loss:5.2f} | Test Accuracy : {test_acc:5.2f}')
+
+# train(model, train_loader)
+
+# val_loss, val_acc = evaluate(model, valid_loader)
+# print(f'Valid Loss : {val_loss:5.2f} | Valid Accuracy : {val_acc:5.2f}')
 
 writer.close()
