@@ -226,4 +226,9 @@ class MobileNetV3(nn.Module):
         ]
         return MobileNetV3(cfgs, mode='small', **kwargs)
 
-
+# model = MobileNetV3()
+# net_large = mobilenetv3_large()
+# net_small = mobilenetv3_small()
+#
+# net_large.load_state_dict(torch.load('pretrained/mobilenetv3-large-1cd25616.pth'))
+# net_small.load_state_dict(torch.load('pretrained/mobilenetv3-small-55df8e1f.pth'))

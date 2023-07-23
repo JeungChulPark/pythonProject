@@ -21,6 +21,8 @@ from model.ViT import ViT
 from tqdm import tqdm
 from time import sleep
 from torch.utils.tensorboard import SummaryWriter
+from torchvision.models.mobilenet import mobilenet_v2
+
 class CustomDataSet(Dataset):
     def __init__(self, target=None, path='', transform=None):
         self.path = path
