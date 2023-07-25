@@ -1,5 +1,6 @@
 import torch
 import os
+import cv2
 import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset, DataLoader
@@ -30,6 +31,7 @@ class CustomDataSet(Dataset):
                     self.img_array_tl.append(self.mnist_imgs[i])
                     self.img_array_tl_res.append(target[i])
                 i = i + 1
+
     def __len__(self):
         if self.target is not None:
             return len(self.img_array_tl)
@@ -62,14 +64,13 @@ class CustomDataSet(Dataset):
         return resized_img
 
     def GetFilePath(self, path):
-        # path = "Image/Result"
+        # path = "Image/result"
         filelist = []
 
         for root, dirs, files in os.walk(path):
             for file in files:
                 filelist.append(os.path.join(root, file))
-
-        print("\n")
+        
         v = [x for x in filelist if x.endswith(".png")]
         return v
 
@@ -194,7 +195,6 @@ def main():
     print('Submission saved in: {}'.format('submission.csv'))
 
 def custummain():
-    print('custummain')
     learning_rate = 1.0
     reduce_lr_gamma = 0.7
     batch_size = 100
@@ -213,13 +213,14 @@ def custummain():
         transforms.Normalize((0.1307,), (0.3081))
     ])
 
-    dataset = CustomDataSet(path='Image/Reslut', transform=transform)
+    dataset = CustomDataSet(path='Image/result', transform=transform)
     dataloader = DataLoader(dataset, batch_size=batch_size)
 
     res = []
-    f = open("Image/Result/answer_mobilenet_v2_model100.txt", 'w')
+    f = open("Image/result/answer_mobilenet_v2_model100.txt", 'w')
     with torch.no_grad():
         for data in dataloader:
+            data = data.repeat(1, 3, 1, 1)
             data = data.to(device)
             out = model(data)
             preds = torch.max(out.data, 1)[1]
@@ -230,6 +231,6 @@ def custummain():
 
 
 if __name__ == '__main__':
-#    main()
+#   main()
     custummain()
 
