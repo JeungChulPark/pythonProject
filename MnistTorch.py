@@ -100,6 +100,7 @@ def DataTrainLoad():
 
     train_loader = DataLoader(train_set, batch_size=batch_size)
     return train_loader
+
 def DataTestLoad():
     test_set = torchvision.datasets.MNIST(
         root='./data/MNIST',
@@ -147,6 +148,7 @@ def draw_train_val(num_epochs, loss_hist, metric_hist):
 def get_lr(opt):
     for param_group in opt.param_groups:
         return param_group['lr']
+
 def Train(dataloader=None, path2weights=''):
     train_loader = DataTrainLoad()
     test_loader = DataTestLoad()
@@ -253,30 +255,33 @@ batch_size = 100
 epochs = 100
 num_classes = 10
 
-model = ConvNet(1).to(device)
+# model = ConvNet(1).to(device)
 # model = ViT().to(device)
-# n = 3
-# version = 3
-# if version == 1:
-#     depth = n * 6 + 2
-# elif version == 2:
-#     depth = n * 9 + 2
-# elif version == 3:
-#     depth = n * 6 + 2
-# elif version == 4:
-#     depth = n * 9 + 2
-#
-# model = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
-# model = ResNetTorch(version=version, layer=ResnetLayer, layeriter=ResnetLayerIter, depth=depth, num_classes=num_classes).to(device)
-criterion = nn.CrossEntropyLoss().to(device)
-optimizer = optim.Adam(model.parameters(), lr = learning_rate)
-lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
 
-# loss_hist, metric_hist = Train(dataloader=None, path2weights='./save/ConvNet_V1_Model100.pt')
+n = 1
+version = 1
+if version == 1:
+    depth = n * 6 + 2
+elif version == 2:
+    depth = n * 9 + 2
+elif version == 3:
+    depth = n * 6 + 2
+elif version == 4:
+    depth = n * 9 + 2
+
+# model = ResNetTorch(version=version, layer=ResnetBlockLayer, layeriter=None, depth=depth, num_classes=num_classes).to(device)
+model = ResNetTorch(version=version, layer=ResnetLayer, layeriter=ResnetLayerIter, depth=depth, num_classes=num_classes).to(device)
+#
+# criterion = nn.CrossEntropyLoss().to(device)
+# optimizer = optim.Adam(model.parameters(), lr = learning_rate)
+# lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10)
+#
+# loss_hist, metric_hist = Train(dataloader=None, path2weights='./save/Torch_ResNet_V1_Model100.pt')
 # writer.flush()
 # draw_train_val(epochs, loss_hist, metric_hist)
 
-model.load_state_dict(torch.load('save/Transformer_ConvNet_V1_Distillation_Model100.pt'))
+# model.load_state_dict(torch.load('save/Transformer_ConvNet_V1_Distillation_Model100.pt'))
+model.load_state_dict(torch.load('save/Torch_ResNet_V1_Model100.pt'))
 model.eval()
 
 transform = transforms.Compose(
@@ -288,7 +293,7 @@ dataset = CustomDataSet(path='Image/Result', transform=transform)
 dataloader = DataLoader(dataset, batch_size=batch_size)
 
 res = []
-f = open("Image/Result/answer_Transformer_ConvNet_V1_Distillation_Model100.txt", 'w')
+f = open("Image/Result/answer_Torch_ResNet_V1_model100.txt", 'w')
 with torch.no_grad():
     for data in dataloader:
         data = data.to(device)
